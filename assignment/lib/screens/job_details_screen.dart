@@ -7,6 +7,7 @@ import '../models/job.dart';
 import '../widgets/timer_widget.dart';
 import '../widgets/notes_widget.dart';
 import '../widgets/signature_widget.dart';
+import 'package:flutter/services.dart';
 
 class JobDetailsScreen extends StatefulWidget {
   final String jobId;
@@ -33,7 +34,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Consumer<JobProvider>(
         builder: (context, jobProvider, child) {
           final job = jobProvider.selectedJob;
@@ -59,6 +60,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                 indicatorColor: Colors.white,
                 tabs: [
                   Tab(icon: Icon(Icons.info_outline), text: 'Overview'),
+                  Tab(icon: Icon(Icons.check_circle_outline), text: 'Checklist'),
                   Tab(icon: Icon(Icons.access_time), text: 'Time'),
                   Tab(icon: Icon(Icons.build), text: 'Parts'),
                   Tab(icon: Icon(Icons.note_alt_outlined), text: 'Notes'),
@@ -99,6 +101,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     return TabBarView(
       children: [
         _buildOverviewTab(job),
+        _buildChecklistTab(job),
         _buildTimeTab(job),
         _buildPartsTab(job),
         _buildNotesTab(job),
@@ -122,6 +125,47 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     );
   }
 
+  Widget _buildChecklistTab(Job job) {
+    final tasks = job.tasks;
+    final total = tasks.length;
+    final done = tasks.where((t) => t.status == JobTaskStatus.completed || t.status == JobTaskStatus.skipped).length;
+    final progress = total == 0 ? 0.0 : done / total;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Task Checklist', style: AppTextStyles.headline2),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(value: progress, minHeight: 8, backgroundColor: AppColors.divider),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text('$done of $total completed', style: AppTextStyles.caption),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (tasks.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
+              child: Text('No tasks added for this job', style: AppTextStyles.body2),
+            )
+          else
+            ...tasks.map((t) => _TaskItem(task: t, onToggle: (newStatus) {
+                  Provider.of<JobProvider>(context, listen: false).updateTaskStatus(t.id, newStatus);
+                })),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTimeTab(Job job) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -129,6 +173,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildTimerSection(job),
+          const SizedBox(height: 16),
+          _buildTimerLog(job),
         ],
       ),
     );
@@ -233,8 +279,16 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
             _buildDetailRow('Name', job.customer.name),
             _buildDetailRow('Contact No', job.customer.contactNo),
             _buildDetailRow('Address', job.customer.address),
-            _buildDetailRow('Plate No', job.customer.plateNo),
-            _buildDetailRow('Equipment', job.customer.equipment),
+            if (job.vehicle != null) ...[
+              _buildDetailRow('Plate No', job.vehicle?.plateNo ?? '-'),
+              _buildDetailRow(
+                'Vehicle',
+                [job.vehicle?.brand, job.vehicle?.model, if (job.vehicle?.year != null) job.vehicle!.year.toString()]
+                    .where((e) => (e ?? '').toString().isNotEmpty)
+                    .join(' ')
+                    .trim(),
+              ),
+            ],
           ],
         ),
       ),
@@ -261,33 +315,6 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTimerSection(Job job) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Time Tracking',
-              style: AppTextStyles.headline2,
-            ),
-            const SizedBox(height: 16),
-            TimerWidget(
-              jobId: job.id,
-              isRunning: _isTimerRunning,
-              onStart: () => _startTimer(),
-              onPause: () => _pauseTimer(),
-              onStop: () => _stopTimer(),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -380,6 +407,122 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildTimerSection(Job job) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Time Tracking', style: AppTextStyles.headline2),
+            const SizedBox(height: 12),
+            TimerWidget(
+              jobId: job.id,
+              isRunning: _isTimerRunning,
+              onStart: () {
+                setState(() => _isTimerRunning = true);
+                Provider.of<JobProvider>(context, listen: false).addTimerEvent(job.id, JobTimerAction.start);
+              },
+              onPause: () {
+                setState(() => _isTimerRunning = false);
+                Provider.of<JobProvider>(context, listen: false).addTimerEvent(job.id, JobTimerAction.pause);
+              },
+              onStop: () {
+                setState(() => _isTimerRunning = false);
+                Provider.of<JobProvider>(context, listen: false).addTimerEvent(job.id, JobTimerAction.stop);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimerLog(Job job) {
+    final timers = List<JobTimerEvent>.from((job.timers as List<JobTimerEvent>? ?? const <JobTimerEvent>[]))
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('Log', style: AppTextStyles.headline2),
+                const Spacer(),
+                Text('${timers.length} entries', style: AppTextStyles.caption),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (timers.isEmpty)
+              Text('No time entries yet', style: AppTextStyles.body2)
+            else
+              ...timers.map((e) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        Icon(_timerIcon(e.action), size: 18, color: _timerColor(e.action)),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(_actionLabel(e.action), style: AppTextStyles.body1)),
+                        Text(DateHelper.formatDateTime(e.timestamp), style: AppTextStyles.caption),
+                      ],
+                    ),
+                  )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _actionLabel(JobTimerAction a) {
+    switch (a) {
+      case JobTimerAction.start:
+        return 'Started';
+      case JobTimerAction.pause:
+        return 'Paused';
+      case JobTimerAction.resume:
+        return 'Resumed';
+      case JobTimerAction.stop:
+        return 'Stopped';
+    }
+  }
+
+  IconData _timerIcon(JobTimerAction a) {
+    switch (a) {
+      case JobTimerAction.start:
+        return Icons.play_arrow;
+      case JobTimerAction.pause:
+        return Icons.pause;
+      case JobTimerAction.resume:
+        return Icons.play_circle_fill;
+      case JobTimerAction.stop:
+        return Icons.stop;
+    }
+  }
+
+  Color _timerColor(JobTimerAction a) {
+    switch (a) {
+      case JobTimerAction.start:
+      case JobTimerAction.resume:
+        return AppColors.success;
+      case JobTimerAction.pause:
+        return AppColors.warning;
+      case JobTimerAction.stop:
+        return AppColors.error;
+    }
+  }
+
+  void _copyToClipboard(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
   }
 
   Widget _buildActionButtons(Job job) {
@@ -586,6 +729,61 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
           onSignatureComplete: () {
             Navigator.pop(context);
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _TaskItem extends StatelessWidget {
+  final JobTask task;
+  final ValueChanged<JobTaskStatus> onToggle;
+
+  const _TaskItem({required this.task, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDone = task.status == JobTaskStatus.completed;
+    return Card(
+      elevation: 1.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Checkbox(
+              value: isDone,
+              onChanged: (v) => onToggle(v == true ? JobTaskStatus.completed : JobTaskStatus.pending),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(task.description, style: AppTextStyles.body1),
+                  if (task.status == JobTaskStatus.inProgress)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text('In progress', style: AppTextStyles.caption),
+                    ),
+                  if (task.status == JobTaskStatus.skipped)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text('Skipped', style: AppTextStyles.caption),
+                    ),
+                ],
+              ),
+            ),
+            if ((task.tutorialUrl ?? '').isNotEmpty)
+              OutlinedButton.icon(
+                onPressed: () => Clipboard.setData(ClipboardData(text: task.tutorialUrl!)).then((_) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tutorial link copied')));
+                }),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Tutorial'),
+              ),
+          ],
         ),
       ),
     );

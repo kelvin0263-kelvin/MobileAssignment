@@ -49,6 +49,7 @@ dependencies:
   
   # Image picker
   image_picker: ^1.0.4
+  # removed audio recording dependencies
   
   # Timer functionality
   timer_builder: ^2.0.0
@@ -110,3 +111,4 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+dependency_overrides:

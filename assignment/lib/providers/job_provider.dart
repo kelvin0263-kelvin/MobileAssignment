@@ -87,19 +87,94 @@ class JobProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> addJobNote(String jobId, String content, String? imagePath) async {
+  Future<void> addJobNote(String jobId, String content, {List<NoteFile> files = const []}) async {
     try {
-      final success = await _jobService.addJobNote(jobId, content, imagePath);
-      if (success) {
-        // Reload the job to get updated notes
-        await loadJobById(jobId);
-        
-        // Update the job in the list
-        final jobIndex = _jobs.indexWhere((job) => job.id == jobId);
-        if (jobIndex != -1) {
-          _jobs[jobIndex] = _selectedJob!;
+      final noteId = await _jobService.addJobNote(jobId, content);
+      if (noteId != null) {
+        if (files.isNotEmpty) {
+          await _jobService.attachFilesToNote(noteId, files);
         }
         
+        // Optimistically add the note to the UI first for better UX
+        if (_selectedJob?.id == jobId) {
+          final newNote = JobNote(
+            id: noteId,
+            content: content,
+            createdAt: DateTime.now(),
+            files: files,
+          );
+          
+          final updatedNotes = List<JobNote>.from(_selectedJob!.notes)..add(newNote);
+          _selectedJob = _selectedJob!.copyWith(notes: updatedNotes);
+          
+          // Update in jobs list as well
+          final jobIndex = _jobs.indexWhere((job) => job.id == jobId);
+          if (jobIndex != -1) {
+            _jobs[jobIndex] = _jobs[jobIndex].copyWith(notes: updatedNotes);
+          }
+          
+          notifyListeners();
+        }
+        
+        // Then reload in the background to sync with server
+        await loadJobById(jobId);
+        final jobIndex = _jobs.indexWhere((job) => job.id == jobId);
+        if (jobIndex != -1 && _selectedJob != null) {
+          _jobs[jobIndex] = _selectedJob!;
+        }
+        notifyListeners();
+      } else {
+        throw Exception('Failed to create note');
+      }
+    } catch (e) {
+      _error = 'Failed to add note: ${e.toString()}';
+      notifyListeners();
+      rethrow; // Re-throw so the UI can handle it
+    }
+  }
+
+  Future<void> updateTaskStatus(String taskId, JobTaskStatus status) async {
+    try {
+      final success = await _jobService.updateTaskStatus(taskId, status);
+      if (success && _selectedJob != null) {
+        // Update local selected job tasks
+        final updatedTasks = _selectedJob!.tasks.map((t) => t.id == taskId ? t.copyWith(status: status) : t).toList();
+        _selectedJob = _selectedJob!.copyWith(tasks: updatedTasks);
+
+        // Also update it within jobs list if present
+        final idx = _jobs.indexWhere((j) => j.id == _selectedJob!.id);
+        if (idx != -1) {
+          _jobs[idx] = _jobs[idx].copyWith(tasks: updatedTasks);
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> addTimerEvent(String jobId, JobTimerAction action, {String? mechanicId}) async {
+    try {
+      final ok = await _jobService.addTimerEvent(jobId, action, mechanicId: mechanicId);
+      if (ok) {
+        // Optimistic local append
+        final evt = JobTimerEvent(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          jobId: jobId,
+          action: action,
+          timestamp: DateTime.now(),
+          mechanicId: null,
+        );
+        if (_selectedJob?.id == jobId) {
+          final base = (_selectedJob!.timers as List<JobTimerEvent>? ?? const <JobTimerEvent>[]);
+          final timers = List<JobTimerEvent>.from(base)..add(evt);
+          _selectedJob = _selectedJob!.copyWith(timers: timers);
+          final idx = _jobs.indexWhere((j) => j.id == jobId);
+          if (idx != -1) {
+            _jobs[idx] = _jobs[idx].copyWith(timers: timers);
+          }
+        }
         notifyListeners();
       }
     } catch (e) {

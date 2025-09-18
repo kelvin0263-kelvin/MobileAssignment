@@ -72,13 +72,15 @@ class DashboardJobCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      job.customer.equipment,
+                      [job.vehicle?.brand, job.vehicle?.model, if (job.vehicle?.year != null) job.vehicle!.year.toString()]
+                          .where((e) => (e ?? '').toString().isNotEmpty)
+                          .join(' '),
                       style: AppTextStyles.caption,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('(${job.customer.plateNo})', style: AppTextStyles.caption),
+                  Text('(${job.vehicle?.plateNo ?? '-'})', style: AppTextStyles.caption),
                 ],
               ),
               const SizedBox(height: 12),
@@ -121,5 +123,4 @@ class DashboardJobCard extends StatelessWidget {
     return AppColors.info;
   }
 }
-
 

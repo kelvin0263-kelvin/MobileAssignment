@@ -86,7 +86,7 @@ class JobCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    job.customer.plateNo,
+                    job.vehicle?.plateNo ?? '-',
                     style: AppTextStyles.caption,
                   ),
                 ],

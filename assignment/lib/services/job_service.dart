@@ -1,176 +1,389 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/job.dart';
 
 class JobService {
-  // In-memory typed jobs
-  static final List<Job> _jobs = _buildJobs();
+  final SupabaseClient _client = Supabase.instance.client;
 
-  static List<Job> _buildJobs() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day, 9);
-    final startOfWeek = DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: now.weekday - 1)); // Monday
-
-    DateTime at(int dayOffset, int hour) => DateTime(
-          startOfWeek.year,
-          startOfWeek.month,
-          startOfWeek.day + dayOffset,
-          hour,
-        );
-
-    Job createJob({
-      required String id,
-      required String name,
-      required String desc,
-      required JobStatus status,
-      required DateTime createdAt,
-      required String customerName,
-      required String plate,
-      required String equipment,
-    }) {
-      return Job(
-        id: id,
-        jobName: name,
-        description: desc,
-        status: status,
-        createdAt: createdAt,
-        customer: Customer(
-          name: customerName,
-          contactNo: '+60123456789',
-          address: 'Kuala Lumpur, Malaysia',
-          plateNo: plate,
-          equipment: equipment,
-        ),
-        requestedServices: [
-          'Inspection',
-          'General Service',
-        ],
-        assignedParts: [
-          AssignedPart(name: 'Standard Part', quantity: 1, notes: 'Mock part'),
-        ],
-        notes: [],
-      );
+  // --- Mapping helpers ---
+  JobStatus _parseStatus(String s) {
+    switch (s) {
+      case 'pending':
+        return JobStatus.pending;
+      case 'accepted':
+        return JobStatus.accepted;
+      case 'in_progress':
+        return JobStatus.inProgress;
+      case 'on_hold':
+        return JobStatus.onHold;
+      case 'completed':
+        return JobStatus.completed;
+      default:
+        return JobStatus.pending;
     }
-
-    final List<Job> todayJobs = [
-      createJob(
-        id: 'JOB-T-001',
-        name: 'Engine Oil Change',
-        desc: 'Oil change and filter replacement',
-        status: JobStatus.inProgress,
-        createdAt: DateTime(today.year, today.month, today.day, 9),
-        customerName: 'Ahmad bin Ismail',
-        plate: 'WXY 1234',
-        equipment: 'Toyota Camry 2020',
-      ),
-      createJob(
-        id: 'JOB-T-002',
-        name: 'Brake Inspection',
-        desc: 'Brake pads check and fluid top up',
-        status: JobStatus.onHold,
-        createdAt: DateTime(today.year, today.month, today.day, 10),
-        customerName: 'Sarah Tan',
-        plate: 'ABC 5678',
-        equipment: 'Honda Civic 2019',
-      ),
-      createJob(
-        id: 'JOB-T-003',
-        name: 'AC Service',
-        desc: 'AC cleaning and refrigerant top-up',
-        status: JobStatus.completed,
-        createdAt: DateTime(today.year, today.month, today.day, 14),
-        customerName: 'Raj Kumar',
-        plate: 'DEF 9012',
-        equipment: 'Proton Saga 2021',
-      ),
-      createJob(
-        id: 'JOB-T-004',
-        name: 'Tire Rotation',
-        desc: 'Rotate and balance tires',
-        status: JobStatus.inProgress,
-        createdAt: DateTime(today.year, today.month, today.day, 16),
-        customerName: 'Lim Wei Chen',
-        plate: 'GHI 3456',
-        equipment: 'Nissan Almera 2022',
-      ),
-    ];
-
-    final List<Job> weekJobs = [
-      createJob(
-        id: 'JOB-W-005',
-        name: 'Battery Replacement',
-        desc: 'Replace 12V battery',
-        status: JobStatus.onHold,
-        createdAt: at(1, 11),
-        customerName: 'John Lee',
-        plate: 'JKL 7788',
-        equipment: 'Perodua Myvi 2018',
-      ),
-      createJob(
-        id: 'JOB-W-006',
-        name: 'Suspension Check',
-        desc: 'Front suspension noise diagnosis',
-        status: JobStatus.completed,
-        createdAt: at(2, 15),
-        customerName: 'Aisha Noor',
-        plate: 'MNO 3344',
-        equipment: 'Mazda 3 2017',
-      ),
-      createJob(
-        id: 'JOB-W-007',
-        name: 'Transmission Fluid Change',
-        desc: 'ATF drain and fill',
-        status: JobStatus.inProgress,
-        createdAt: at(3, 10),
-        customerName: 'Kumaravel',
-        plate: 'PQR 5566',
-        equipment: 'Honda City 2016',
-      ),
-    ];
-
-    return [...todayJobs, ...weekJobs];
   }
 
+  String _toDbStatus(JobStatus status) {
+    switch (status) {
+      case JobStatus.pending:
+        return 'pending';
+      case JobStatus.accepted:
+        return 'accepted';
+      case JobStatus.inProgress:
+        return 'in_progress';
+      case JobStatus.onHold:
+        return 'on_hold';
+      case JobStatus.completed:
+        return 'completed';
+    }
+  }
+
+  JobTaskStatus _parseTaskStatus(String s) {
+    switch (s) {
+      case 'in_progress':
+        return JobTaskStatus.inProgress;
+      case 'completed':
+        return JobTaskStatus.completed;
+      case 'skipped':
+        return JobTaskStatus.skipped;
+      case 'pending':
+      default:
+        return JobTaskStatus.pending;
+    }
+  }
+
+  String _toDbTaskStatus(JobTaskStatus s) {
+    switch (s) {
+      case JobTaskStatus.pending:
+        return 'pending';
+      case JobTaskStatus.inProgress:
+        return 'in_progress';
+      case JobTaskStatus.completed:
+        return 'completed';
+      case JobTaskStatus.skipped:
+        return 'skipped';
+    }
+  }
+
+  JobTimerAction _parseTimerAction(String s) {
+    switch (s) {
+      case 'start':
+        return JobTimerAction.start;
+      case 'pause':
+        return JobTimerAction.pause;
+      case 'resume':
+        return JobTimerAction.resume;
+      case 'stop':
+      default:
+        return JobTimerAction.stop;
+    }
+  }
+
+  String _toDbTimerAction(JobTimerAction a) {
+    switch (a) {
+      case JobTimerAction.start:
+        return 'start';
+      case JobTimerAction.pause:
+        return 'pause';
+      case JobTimerAction.resume:
+        return 'resume';
+      case JobTimerAction.stop:
+        return 'stop';
+    }
+  }
+
+  // --- Public API ---
   Future<List<Job>> getJobs() async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    return List<Job>.from(_jobs);
+    final rows = await _client
+        .from('jobs')
+        .select('id, job_name, description, status, priority, customer_id, vehicle_id, assigned_mechanic_id, created_at, start_time, end_time, estimated_duration, actual_duration, deadline, digital_signature')
+        .order('created_at', ascending: false);
+
+    return _hydrateJobs(List<Map<String, dynamic>>.from(rows));
   }
 
   Future<Job?> getJobById(String jobId) async {
-    await Future.delayed(const Duration(milliseconds: 250));
-    try {
-      return _jobs.firstWhere((job) => job.id == jobId);
-    } catch (_) {
-      return null;
-    }
+    final rows = await _client
+        .from('jobs')
+        .select('id, job_name, description, status, priority, customer_id, vehicle_id, assigned_mechanic_id, created_at, start_time, end_time, estimated_duration, actual_duration, deadline, digital_signature')
+        .eq('id', jobId)
+        .limit(1);
+    if (rows.isEmpty) return null;
+    final list = await _hydrateJobs(List<Map<String, dynamic>>.from(rows));
+    return list.isNotEmpty ? list.first : null;
   }
 
   Future<bool> updateJobStatus(String jobId, JobStatus status) async {
-    await Future.delayed(const Duration(milliseconds: 250));
-    final index = _jobs.indexWhere((j) => j.id == jobId);
-    if (index == -1) return false;
-    _jobs[index] = _jobs[index].copyWith(status: status);
-    return true;
+    final res = await _client
+        .from('jobs')
+        .update({'status': _toDbStatus(status)})
+        .eq('id', jobId)
+        .select('id')
+        .maybeSingle();
+    return res != null;
   }
 
-  Future<bool> addJobNote(String jobId, String content, String? imagePath) async {
-    await Future.delayed(const Duration(milliseconds: 250));
-    final index = _jobs.indexWhere((j) => j.id == jobId);
-    if (index == -1) return false;
-    final note = JobNote(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: content,
-      createdAt: DateTime.now(),
-      imagePath: imagePath,
-    );
-    final updatedNotes = [..._jobs[index].notes, note];
-    _jobs[index] = _jobs[index].copyWith(notes: updatedNotes);
-    return true;
+  Future<String?> addJobNote(String jobId, String content) async {
+    try {
+      final res = await _client
+          .from('job_notes')
+          .insert({
+            'job_id': jobId, 
+            'content': content,
+            'created_at': DateTime.now().toIso8601String(),
+          })
+          .select('id')
+          .maybeSingle();
+      return res?['id']?.toString();
+    } catch (e) {
+      print('Error adding job note: $e');
+      // If it's a duplicate key error, try to get the existing note
+      if (e.toString().contains('duplicate key') || e.toString().contains('already exists')) {
+        // Generate a unique ID by adding timestamp
+        final uniqueId = 'note_${DateTime.now().millisecondsSinceEpoch}';
+        final res = await _client
+            .from('job_notes')
+            .insert({
+              'id': uniqueId,
+              'job_id': jobId, 
+              'content': content,
+              'created_at': DateTime.now().toIso8601String(),
+            })
+            .select('id')
+            .maybeSingle();
+        return res?['id']?.toString();
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> attachFilesToNote(String noteId, List<NoteFile> files) async {
+    if (files.isEmpty) return;
+    final payload = files
+        .map((f) => {
+              'note_id': noteId,
+              'file_type': f.fileType,
+              'file_path': f.filePath,
+            })
+        .toList();
+    await _client.from('job_note_files').insert(payload);
+  }
+
+  Future<bool> updateTaskStatus(String taskId, JobTaskStatus status) async {
+    final res = await _client
+        .from('job_tasks')
+        .update({'status': _toDbTaskStatus(status)})
+        .eq('id', taskId)
+        .select('id')
+        .maybeSingle();
+    return res != null;
+  }
+
+  Future<bool> addTimerEvent(String jobId, JobTimerAction action, {String? mechanicId}) async {
+    final res = await _client
+        .from('job_timers')
+        .insert({
+          'job_id': jobId,
+          'mechanic_id': mechanicId,
+          'action': _toDbTimerAction(action),
+        })
+        .select('id')
+        .maybeSingle();
+    return res != null;
   }
 
   Future<List<Job>> searchJobs(String query) async {
-    await Future.delayed(const Duration(milliseconds: 200));
     if (query.isEmpty) return getJobs();
-    final q = query.toLowerCase();
-    return _jobs.where((j) => j.jobName.toLowerCase().contains(q) || j.description.toLowerCase().contains(q)).toList();
+    final q = '%${query.replaceAll('%', '\\%').replaceAll('_', '\\_')}%';
+    final rows = await _client
+        .from('jobs')
+        .select('id, job_name, description, status, priority, customer_id, vehicle_id, assigned_mechanic_id, created_at, start_time, end_time, estimated_duration, actual_duration, deadline, digital_signature')
+        .or('job_name.ilike.$q,description.ilike.$q')
+        .order('created_at', ascending: false);
+    return _hydrateJobs(List<Map<String, dynamic>>.from(rows));
+  }
+
+  // --- Hydration helpers ---
+  Future<List<Job>> _hydrateJobs(List<Map<String, dynamic>> jobRows) async {
+    if (jobRows.isEmpty) return [];
+    final jobIds = jobRows.map((r) => r['id'].toString()).toList();
+    final customerIds = jobRows
+        .map((r) => r['customer_id'])
+        .where((id) => id != null)
+        .map((id) => id.toString())
+        .toSet()
+        .toList();
+    final vehicleIds = jobRows
+        .map((r) => r['vehicle_id'])
+        .where((id) => id != null)
+        .map((id) => id.toString())
+        .toSet()
+        .toList();
+
+    // Customers
+    final customers = customerIds.isEmpty
+        ? <Map<String, dynamic>>[]
+        : List<Map<String, dynamic>>.from(await _client
+            .from('customers')
+            .select('id, name, contact_no, address')
+            .inFilter('id', customerIds));
+    final customersById = {
+      for (final c in customers) c['id'].toString(): c,
+    };
+
+    // Vehicles
+    final vehicles = vehicleIds.isEmpty
+        ? <Map<String, dynamic>>[]
+        : List<Map<String, dynamic>>.from(await _client
+            .from('vehicles')
+            .select('id, customer_id, brand, model, year, plate_no')
+            .inFilter('id', vehicleIds));
+    final vehiclesById = { for (final v in vehicles) v['id'].toString(): v };
+
+    // Requested services
+    final services = List<Map<String, dynamic>>.from(await _client
+        .from('job_services')
+        .select('job_id, service_name')
+        .inFilter('job_id', jobIds));
+    final servicesByJob = <String, List<String>>{};
+    for (final s in services) {
+      final id = s['job_id'].toString();
+      (servicesByJob[id] ??= <String>[]).add((s['service_name'] ?? '').toString());
+    }
+
+    // Assigned parts
+    final parts = List<Map<String, dynamic>>.from(await _client
+        .from('assigned_parts')
+        .select('job_id, name, quantity, notes')
+        .inFilter('job_id', jobIds));
+    final partsByJob = <String, List<AssignedPart>>{};
+    for (final p in parts) {
+      final id = p['job_id'].toString();
+      (partsByJob[id] ??= <AssignedPart>[]).add(AssignedPart(
+        name: (p['name'] ?? '').toString(),
+        quantity: (p['quantity'] ?? 1) as int,
+        notes: p['notes'] as String?,
+      ));
+    }
+
+    // Notes
+    final notes = List<Map<String, dynamic>>.from(await _client
+        .from('job_notes')
+        .select('id, job_id, content, created_at')
+        .inFilter('job_id', jobIds)
+        .order('created_at'));
+    final noteIds = notes.map((n) => n['id'].toString()).toList();
+    final noteFiles = noteIds.isEmpty
+        ? <Map<String, dynamic>>[]
+        : List<Map<String, dynamic>>.from(await _client
+            .from('job_note_files')
+            .select('id, note_id, file_type, file_path, uploaded_at')
+            .inFilter('note_id', noteIds));
+    final filesByNote = <String, List<NoteFile>>{};
+    for (final f in noteFiles) {
+      final nId = f['note_id'].toString();
+      (filesByNote[nId] ??= <NoteFile>[]).add(NoteFile(
+        id: f['id'].toString(),
+        noteId: nId,
+        fileType: (f['file_type'] ?? '').toString(),
+        filePath: (f['file_path'] ?? '').toString(),
+        uploadedAt: f['uploaded_at'] != null ? DateTime.parse(f['uploaded_at'] as String) : null,
+      ));
+    }
+    final notesByJob = <String, List<JobNote>>{};
+    for (final n in notes) {
+      final jobIdStr = n['job_id'].toString();
+      final nId = n['id'].toString();
+      (notesByJob[jobIdStr] ??= <JobNote>[]).add(JobNote(
+        id: nId,
+        content: (n['content'] ?? '').toString(),
+        createdAt: DateTime.parse(n['created_at'] as String),
+        files: filesByNote[nId] ?? const <NoteFile>[],
+      ));
+    }
+
+    // Job tasks
+    final tasks = List<Map<String, dynamic>>.from(await _client
+        .from('job_tasks')
+        .select('id, job_id, description, status, assigned_mechanic_id, tutorial_url, start_time, end_time, procedure_id, procedure_step_id')
+        .inFilter('job_id', jobIds));
+    final tasksByJob = <String, List<JobTask>>{};
+    for (final t in tasks) {
+      final id = t['job_id'].toString();
+      (tasksByJob[id] ??= <JobTask>[]).add(JobTask(
+        id: t['id'].toString(),
+        description: (t['description'] ?? '').toString(),
+        status: _parseTaskStatus((t['status'] ?? 'pending') as String),
+        assignedMechanicId: t['assigned_mechanic_id']?.toString(),
+        tutorialUrl: t['tutorial_url'] as String?,
+        startTime: t['start_time'] != null ? DateTime.parse(t['start_time'] as String) : null,
+        endTime: t['end_time'] != null ? DateTime.parse(t['end_time'] as String) : null,
+        procedureId: t['procedure_id']?.toString(),
+        procedureStepId: t['procedure_step_id']?.toString(),
+        stepNumber: null,
+      ));
+    }
+
+    // Timer logs
+    final timers = List<Map<String, dynamic>>.from(await _client
+        .from('job_timers')
+        .select('id, job_id, mechanic_id, action, timestamp')
+        .inFilter('job_id', jobIds)
+        .order('timestamp'));
+    final timersByJob = <String, List<JobTimerEvent>>{};
+    for (final t in timers) {
+      final id = t['job_id'].toString();
+      (timersByJob[id] ??= <JobTimerEvent>[]).add(JobTimerEvent(
+        id: t['id'].toString(),
+        jobId: id,
+        action: _parseTimerAction((t['action'] ?? 'stop') as String),
+        timestamp: DateTime.parse(t['timestamp'] as String),
+        mechanicId: t['mechanic_id']?.toString(),
+      ));
+    }
+
+    // Build final Job objects
+    final jobs = <Job>[];
+    for (final r in jobRows) {
+      final customerRow = customersById[r['customer_id']?.toString()];
+      final customer = Customer(
+        name: (customerRow?['name'] ?? 'Unknown') as String,
+        contactNo: (customerRow?['contact_no'] ?? '') as String,
+        address: (customerRow?['address'] ?? '') as String,
+      );
+      final vehicleRow = vehiclesById[r['vehicle_id']?.toString()];
+      final vehicle = vehicleRow == null
+          ? null
+          : Vehicle(
+              id: vehicleRow['id'].toString(),
+              brand: vehicleRow['brand'] as String?,
+              model: vehicleRow['model'] as String?,
+              year: vehicleRow['year'] as int?,
+              plateNo: vehicleRow['plate_no'] as String?,
+            );
+
+      jobs.add(Job(
+        id: r['id'].toString(),
+        jobName: (r['job_name'] ?? '') as String,
+        description: (r['description'] ?? '') as String,
+        status: _parseStatus((r['status'] ?? 'pending') as String),
+        createdAt: DateTime.parse(r['created_at'] as String),
+        startTime: r['start_time'] != null ? DateTime.parse(r['start_time'] as String) : null,
+        endTime: r['end_time'] != null ? DateTime.parse(r['end_time'] as String) : null,
+        estimatedDuration: r['estimated_duration'] as int?,
+        actualDuration: r['actual_duration'] as int?,
+        assignedMechanicId: r['assigned_mechanic_id']?.toString(),
+        priority: (r['priority'] ?? 'medium') as String?,
+        deadline: r['deadline'] != null ? DateTime.parse(r['deadline'] as String) : null,
+        digitalSignature: r['digital_signature'] as String?,
+        customer: customer,
+        vehicle: vehicle,
+        requestedServices: servicesByJob[r['id'].toString()] ?? const <String>[],
+        assignedParts: partsByJob[r['id'].toString()] ?? const <AssignedPart>[],
+        notes: notesByJob[r['id'].toString()] ?? const <JobNote>[],
+        tasks: tasksByJob[r['id'].toString()] ?? const <JobTask>[],
+        timers: timersByJob[r['id'].toString()] ?? const <JobTimerEvent>[],
+      ));
+    }
+    return jobs;
   }
 }
