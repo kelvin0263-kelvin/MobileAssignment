@@ -9,6 +9,7 @@ import 'profile_screen.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'job_details_screen.dart';
 import '../widgets/dashboard_job_card.dart';
+import 'procedure_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -48,7 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         index: _currentIndex,
         children: [
           _buildHomeTab(),
-          const TaskScreen(),
+          const ProcedureScreen(),
           const SearchScreen(),
           const ProfileScreen(),
         ],

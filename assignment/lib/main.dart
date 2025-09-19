@@ -9,6 +9,7 @@ import 'utils/app_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/env.dart';
 import 'services/sync_service.dart';
+import 'providers/procedure_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => JobProvider()),
+        ChangeNotifierProvider(create: (_) => ProcedureProvider()),
       ],
       child: MaterialApp(
         title: 'Mechanic Hub',

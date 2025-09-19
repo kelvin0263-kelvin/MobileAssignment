@@ -51,9 +51,9 @@ class AppBottomNavBar extends StatelessWidget {
           label: 'Home',
         ),
         _BottomItem(
-          icon: Icons.assignment_outlined,
-          activeIcon: Icons.assignment_turned_in_rounded,
-          label: 'Task',
+          icon: Icons.book_outlined,
+          activeIcon: Icons.book_rounded,
+          label: 'Procedure',
         ),
         _BottomItem(
           icon: Icons.search,
