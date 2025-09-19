@@ -59,12 +59,6 @@ class AppTextStyles {
     color: AppColors.textPrimary,
   );
   
-  static const TextStyle headline3 = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-  );
-  
   static const TextStyle body1 = TextStyle(
     fontSize: 16,
     color: AppColors.textPrimary,
