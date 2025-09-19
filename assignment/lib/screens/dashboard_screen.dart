@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:provider/provider.dart';
 import '../providers/job_provider.dart';
 import '../utils/app_utils.dart';
@@ -11,6 +12,9 @@ import 'job_details_screen.dart';
 import '../widgets/dashboard_job_card.dart';
 import 'procedure_screen.dart';
 import 'create_job_screen.dart';
+import '../services/connectivity_service.dart';
+import '../services/sync_service.dart';
+import '../services/offline_queue_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -32,6 +36,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Dashboard filters
   final TextEditingController _searchController = TextEditingController();
+  StreamSubscription<bool>? _connSub;
+  StreamSubscription<bool>? _syncSub;
+  Future<void> _refreshAfterSync() async {
+    // Allow backend a brief moment to reflect recent writes
+    await Future.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    Provider.of<JobProvider>(context, listen: false).loadJobs();
+  }
   @override
   void initState() {
     super.initState();
@@ -40,11 +52,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
       // Ensure Total filter is selected by default
       Provider.of<JobProvider>(context, listen: false).setFilterStatus('all');
     });
+    _connSub = ConnectivityService.instance.onStatusChange.listen((online) {
+      if (online && mounted) {
+        // If there is no queued work and not currently syncing, refresh immediately
+        final hasQueue = OfflineQueueService.instance.queue.isNotEmpty;
+        if (!hasQueue && !SyncService.instance.isSyncing) {
+          Provider.of<JobProvider>(context, listen: false).loadJobs();
+        }
+        // Otherwise, wait for sync completion signal
+      }
+    });
+    _syncSub = SyncService.instance.onSyncing.listen((syncing) {
+      if (!syncing && mounted && ConnectivityService.instance.isOnline) {
+        _refreshAfterSync();
+      }
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _connSub?.cancel();
+    _syncSub?.cancel();
     super.dispose();
   }
 

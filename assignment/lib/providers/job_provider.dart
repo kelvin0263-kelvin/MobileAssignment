@@ -180,10 +180,14 @@ class JobProvider extends ChangeNotifier {
     final jobIndex = _jobs.indexWhere((job) => job.id == jobId);
     if (jobIndex != -1) {
       _jobs[jobIndex] = _jobs[jobIndex].copyWith(status: status);
+      // Persist optimistic change to cache so detail reloads use updated data offline
+      JobCacheService.instance.saveJob(_jobs[jobIndex]);
+      JobCacheService.instance.saveJobs(_jobs);
     }
     // Update selected job if it's the same
     if (_selectedJob?.id == jobId) {
       _selectedJob = _selectedJob!.copyWith(status: status);
+      JobCacheService.instance.saveJob(_selectedJob!);
     }
     _applyFilters();
     notifyListeners();
@@ -213,6 +217,8 @@ class JobProvider extends ChangeNotifier {
           final jobIndex = _jobs.indexWhere((job) => job.id == jobId);
           if (jobIndex != -1) {
             _jobs[jobIndex] = _jobs[jobIndex].copyWith(notes: updatedNotes);
+            JobCacheService.instance.saveJob(_jobs[jobIndex]);
+            JobCacheService.instance.saveJobs(_jobs);
           }
           
           notifyListeners();
@@ -223,6 +229,8 @@ class JobProvider extends ChangeNotifier {
         final jobIndex = _jobs.indexWhere((job) => job.id == jobId);
         if (jobIndex != -1 && _selectedJob != null) {
           _jobs[jobIndex] = _selectedJob!;
+          JobCacheService.instance.saveJob(_jobs[jobIndex]);
+          JobCacheService.instance.saveJobs(_jobs);
         }
         notifyListeners();
       } else {
@@ -259,6 +267,11 @@ class JobProvider extends ChangeNotifier {
       if (jobIndex != -1) {
         _jobs[jobIndex] = _jobs[jobIndex].copyWith(notes: updatedNotes);
       }
+      // Persist optimistic note to cache
+      if (_selectedJob != null) {
+        JobCacheService.instance.saveJob(_selectedJob!);
+      }
+      JobCacheService.instance.saveJobs(_jobs);
       notifyListeners();
     }
 
@@ -307,6 +320,9 @@ class JobProvider extends ChangeNotifier {
       if (idx != -1) {
         _jobs[idx] = _jobs[idx].copyWith(tasks: updatedTasks);
       }
+      // Persist optimistic task update to cache
+      JobCacheService.instance.saveJob(_selectedJob!);
+      JobCacheService.instance.saveJobs(_jobs);
       notifyListeners();
     }
     await OfflineQueueService.instance.enqueueUpdateTaskStatus(
@@ -347,6 +363,9 @@ class JobProvider extends ChangeNotifier {
         if (idx != -1) {
           _jobs[idx] = _jobs[idx].copyWith(timers: timers);
         }
+        // Persist optimistic timer to cache
+        JobCacheService.instance.saveJob(_selectedJob!);
+        JobCacheService.instance.saveJobs(_jobs);
         notifyListeners();
       }
       if (!online) {
@@ -364,6 +383,10 @@ class JobProvider extends ChangeNotifier {
         action: _toDbTimerAction(action),
         mechanicId: mechanicId,
       );
+      if (_selectedJob != null) {
+        JobCacheService.instance.saveJob(_selectedJob!);
+      }
+      JobCacheService.instance.saveJobs(_jobs);
       _error = null;
       notifyListeners();
     }
@@ -477,6 +500,11 @@ class JobProvider extends ChangeNotifier {
     if (idx != -1) {
       _jobs[idx] = _jobs[idx].copyWith(digitalSignature: path);
     }
+    // Persist optimistic signature to cache
+    if (_selectedJob != null) {
+      JobCacheService.instance.saveJob(_selectedJob!);
+    }
+    JobCacheService.instance.saveJobs(_jobs);
     notifyListeners();
     await OfflineQueueService.instance.enqueueSaveSignature(jobId: jobId, path: localPath);
   }

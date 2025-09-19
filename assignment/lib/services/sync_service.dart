@@ -18,6 +18,10 @@ class SyncService {
 
   StreamSubscription<bool>? _sub;
   bool _running = false;
+  final StreamController<bool> _syncingController = StreamController<bool>.broadcast();
+
+  bool get isSyncing => _running;
+  Stream<bool> get onSyncing => _syncingController.stream;
 
   Future<void> init() async {
     await _queue.init();
@@ -36,11 +40,13 @@ class SyncService {
 
   Future<void> dispose() async {
     await _sub?.cancel();
+    await _syncingController.close();
   }
 
   Future<void> _sync() async {
     if (_running) return;
     _running = true;
+    _syncingController.add(true);
     try {
       // Copy to avoid concurrent modification
       final actions = List<OfflineAction>.from(_queue.queue);
@@ -64,6 +70,8 @@ class SyncService {
               break;
           }
           await _queue.remove(action.id);
+          // Small delay to ensure backend write visibility for subsequent fetches
+          await Future.delayed(const Duration(milliseconds: 150));
         } catch (_) {
           // Stop on first failure to retry later
           break;
@@ -71,6 +79,7 @@ class SyncService {
       }
     } finally {
       _running = false;
+      _syncingController.add(false);
     }
   }
 
