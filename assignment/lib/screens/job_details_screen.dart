@@ -226,9 +226,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildJobHeader(job),
-          const SizedBox(height: 16),
           _buildQuickStats(job),
+          const SizedBox(height: 16),
+          _buildJobHeader(job),
           const SizedBox(height: 16),
           _buildCustomerDetails(job),
           if (job.vehicle != null) ...[
@@ -247,14 +247,13 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     final done = job.tasks
         .where((t) => t.status == JobTaskStatus.completed)
         .length;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
       children: [
-        _miniStat('Tasks', '$done/$total', Icons.checklist),
-        const SizedBox(height: 12),
-        _miniStat('Notes', '${job.notes.length}', Icons.note_alt_outlined),
-        const SizedBox(height: 12),
-        _miniStat('Parts', '${job.assignedParts.length}', Icons.build),
+        Expanded(child: _miniStat('Task', '$done/$total', Icons.checklist)),
+        const SizedBox(width: 12),
+        Expanded(child: _miniStat('Note', '${job.notes.length}', Icons.note_alt_outlined)),
+        const SizedBox(width: 12),
+        Expanded(child: _miniStat('Part', '${job.assignedParts.length}', Icons.build)),
       ],
     );
   }
@@ -263,16 +262,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.divider),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -396,6 +388,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
         children: [
           _buildTimerSection(job),
           const SizedBox(height: 16),
+          _buildTotalRecordedTime(job),
+          const SizedBox(height: 16),
           _buildTimerLog(job),
         ],
       ),
@@ -426,12 +420,17 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     final statusText = JobStatusHelper.getStatusText(job.status);
     final statusColor = JobStatusHelper.getStatusColor(job.status);
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.divider),
+      ),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: AppColors.cardGradient,
+          color: Colors.white,
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -521,9 +520,10 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
 
   Widget _buildCustomerDetails(Job job) {
     return Card(
-      elevation: 2,
+      elevation: 0,
       color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.divider)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -602,9 +602,10 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     ].where((e) => (e ?? '').toString().isNotEmpty).join(' ').trim();
 
     return Card(
-      elevation: 2,
+      elevation: 0,
       color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.divider)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -701,9 +702,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
 
   Widget _buildAssignedParts(Job job) {
     return Card(
-      elevation: 2,
+      elevation: 0,
       color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.divider)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -735,9 +736,10 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   // Read-only version for Overview tab
   Widget _buildAssignedPartsReadOnly(Job job) {
     return Card(
-      elevation: 2,
+      elevation: 0,
       color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.divider)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -862,8 +864,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
 
   Widget _buildTimerSection(Job job) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.divider)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -908,8 +911,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
       (job.timers as List<JobTimerEvent>? ?? const <JobTimerEvent>[]),
     )..sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.divider)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -955,6 +959,78 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildTotalRecordedTime(Job job) {
+    final duration = _calculateTotalRecordedDuration(job);
+    final label = DateHelper.formatDuration(duration);
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.divider),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.10),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.access_time, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Total Recorded Time', style: AppTextStyles.headline2),
+                  const SizedBox(height: 2),
+                  Text(label, style: AppTextStyles.body1),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Duration _calculateTotalRecordedDuration(Job job) {
+    final List<JobTimerEvent> events = List<JobTimerEvent>.from(job.timers);
+    if (events.isEmpty) return Duration.zero;
+    events.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    DateTime? currentStart;
+    Duration total = Duration.zero;
+
+    for (final e in events) {
+      switch (e.action) {
+        case JobTimerAction.start:
+        case JobTimerAction.resume:
+          currentStart = e.timestamp;
+          break;
+        case JobTimerAction.pause:
+        case JobTimerAction.stop:
+          if (currentStart != null) {
+            total += e.timestamp.difference(currentStart);
+            currentStart = null;
+          }
+          break;
+      }
+    }
+
+    // If timer currently running (last action start/resume), include time until now
+    if (currentStart != null) {
+      total += DateTime.now().difference(currentStart);
+    }
+    return total;
   }
 
   String _actionLabel(JobTimerAction a) {

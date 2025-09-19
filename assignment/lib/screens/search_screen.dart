@@ -87,10 +87,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     children: [
                       Icon(Icons.build, color: AppColors.primary, size: 28),
                       const SizedBox(width: 4),
-                      Text(
-                        'Search',
-                        style: AppTextStyles.headline1,
-                      ),
+                      Text('Search', style: AppTextStyles.headline1),
                     ],
                   ),
                 ],
@@ -106,40 +103,57 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: SizedBox(
                       height: 48,
                       child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search by job name... ',
-                        prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
-                        suffixIcon: IconButton(
-                          tooltip: 'Clear',
-                          icon: const Icon(Icons.clear, color: AppColors.textSecondary),
-                          onPressed: () {
-                            _searchController.clear();
-                            Provider.of<JobProvider>(
-                              context,
-                              listen: false,
-                            ).searchJobs('');
-                          },
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search by job name...',
+                          hintStyle: TextStyle(
+                            fontSize: 14, // 👈 调整提示文字大小
+                            color: AppColors.textSecondary,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: AppColors.textSecondary,
+                          ),
+                          suffixIcon: IconButton(
+                            tooltip: 'Clear',
+                            icon: const Icon(
+                              Icons.clear,
+                              color: AppColors.textSecondary,
+                            ),
+                            onPressed: () {
+                              _searchController.clear();
+                              Provider.of<JobProvider>(
+                                context,
+                                listen: false,
+                              ).searchJobs('');
+                            },
+                          ),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          filled: true,
+                          fillColor: AppColors.surface,
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(
+                              color: AppColors.divider,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(
+                              color: AppColors.primary,
+                            ),
+                          ),
                         ),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: AppColors.divider),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: AppColors.primary),
-                        ),
-                      ),
-                      onChanged: (value) {
-                        Provider.of<JobProvider>(
-                          context,
-                          listen: false,
-                        ).searchJobs(value);
-                      },
+                        onChanged: (value) {
+                          Provider.of<JobProvider>(
+                            context,
+                            listen: false,
+                          ).searchJobs(value);
+                        },
                       ),
                     ),
                   ),
@@ -150,7 +164,6 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
 
             // Filter chips removed in favor of filter sheet
-
             const SizedBox(height: 16),
 
             // Search Results
@@ -164,7 +177,11 @@ class _SearchScreenState extends State<SearchScreen> {
                   List<Job> jobs = jobProvider.filteredJobs;
                   if (_selectedPriority != 'all') {
                     jobs = jobs
-                        .where((j) => (j.priority ?? '').toLowerCase() == _selectedPriority)
+                        .where(
+                          (j) =>
+                              (j.priority ?? '').toLowerCase() ==
+                              _selectedPriority,
+                        )
                         .toList();
                   }
 
@@ -244,8 +261,10 @@ class _SearchScreenState extends State<SearchScreen> {
     final now = DateTime.now();
     int amount = 0; // last amount
     String unit = 'days';
-    String selectedStatus = _selectedFilter; // all | pending | accepted | inProgress | onHold | completed
-    String selectedPriority = _selectedPriority; // all | low | medium | high | urgent
+    String selectedStatus =
+        _selectedFilter; // all | pending | accepted | inProgress | onHold | completed
+    String selectedPriority =
+        _selectedPriority; // all | low | medium | high | urgent
     DateTimeRange? tempRange = _dateRange;
 
     showModalBottomSheet(
@@ -271,7 +290,13 @@ class _SearchScreenState extends State<SearchScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Add filters', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Add filters',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           IconButton(
                             icon: const Icon(Icons.close),
                             onPressed: () => Navigator.pop(context),
@@ -287,17 +312,19 @@ class _SearchScreenState extends State<SearchScreen> {
                         runSpacing: 8,
                         children: [
                           for (final s in const [
-                            ['All','all'],
-                            ['Pending','pending'],
-                            ['Accepted','accepted'],
-                            ['In Progress','inProgress'],
-                            ['On Hold','onHold'],
-                            ['Completed','completed'],
+                            ['All', 'all'],
+                            ['Pending', 'pending'],
+                            ['Accepted', 'accepted'],
+                            ['In Progress', 'inProgress'],
+                            ['On Hold', 'onHold'],
+                            ['Completed', 'completed'],
                           ])
                             ChoiceChip(
                               label: Text(s[0] as String),
                               selected: selectedStatus == (s[1] as String),
-                              onSelected: (_) => setModalState(() => selectedStatus = s[1] as String),
+                              onSelected: (_) => setModalState(
+                                () => selectedStatus = s[1] as String,
+                              ),
                             ),
                         ],
                       ),
@@ -310,16 +337,18 @@ class _SearchScreenState extends State<SearchScreen> {
                         runSpacing: 8,
                         children: [
                           for (final p in const [
-                            ['Any','all'],
-                            ['Low','low'],
-                            ['Medium','medium'],
-                            ['High','high'],
-                            ['Urgent','urgent'],
+                            ['Any', 'all'],
+                            ['Low', 'low'],
+                            ['Medium', 'medium'],
+                            ['High', 'high'],
+                            ['Urgent', 'urgent'],
                           ])
                             ChoiceChip(
                               label: Text(p[0] as String),
                               selected: selectedPriority == (p[1] as String),
-                              onSelected: (_) => setModalState(() => selectedPriority = p[1] as String),
+                              onSelected: (_) => setModalState(
+                                () => selectedPriority = p[1] as String,
+                              ),
                             ),
                         ],
                       ),
@@ -335,23 +364,34 @@ class _SearchScreenState extends State<SearchScreen> {
                             width: 120,
                             child: TextField(
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
                               decoration: InputDecoration(
                                 hintText: 'Enter amount',
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
                                 filled: true,
                                 fillColor: AppColors.surface,
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: AppColors.divider),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.divider,
+                                  ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: AppColors.primary),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
-                              onChanged: (v) => setModalState(() => amount = int.tryParse(v) ?? 0),
+                              onChanged: (v) => setModalState(
+                                () => amount = int.tryParse(v) ?? 0,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -361,26 +401,46 @@ class _SearchScreenState extends State<SearchScreen> {
                               value: unit,
                               isExpanded: true,
                               items: const [
-                                DropdownMenuItem(value: 'days', child: Text('days')),
-                                DropdownMenuItem(value: 'weeks', child: Text('weeks')),
-                                DropdownMenuItem(value: 'months', child: Text('months')),
-                                DropdownMenuItem(value: 'years', child: Text('years')),
+                                DropdownMenuItem(
+                                  value: 'days',
+                                  child: Text('days'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'weeks',
+                                  child: Text('weeks'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'months',
+                                  child: Text('months'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'years',
+                                  child: Text('years'),
+                                ),
                               ],
                               decoration: InputDecoration(
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
                                 filled: true,
                                 fillColor: AppColors.surface,
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: AppColors.divider),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.divider,
+                                  ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: AppColors.primary),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
-                              onChanged: (v) => setModalState(() => unit = v ?? 'days'),
+                              onChanged: (v) =>
+                                  setModalState(() => unit = v ?? 'days'),
                             ),
                           ),
                         ],
@@ -402,7 +462,9 @@ class _SearchScreenState extends State<SearchScreen> {
                                 context: context,
                                 firstDate: DateTime(2000),
                                 lastDate: DateTime(2100),
-                                initialDateRange: tempRange ?? DateTimeRange(start: now, end: now),
+                                initialDateRange:
+                                    tempRange ??
+                                    DateTimeRange(start: now, end: now),
                               );
                               if (picked != null) {
                                 setModalState(() => tempRange = picked);
@@ -425,12 +487,20 @@ class _SearchScreenState extends State<SearchScreen> {
 
                           // Apply date
                           if (tempRange != null) {
-                            jobProvider.setDateRange(tempRange!.start, tempRange!.end);
+                            jobProvider.setDateRange(
+                              tempRange!.start,
+                              tempRange!.end,
+                            );
                             setState(() => _dateRange = tempRange);
                           } else if (amount > 0) {
                             final from = _dateFromAmountUnit(now, amount, unit);
                             jobProvider.setDateRange(from, now);
-                            setState(() => _dateRange = DateTimeRange(start: from, end: now));
+                            setState(
+                              () => _dateRange = DateTimeRange(
+                                start: from,
+                                end: now,
+                              ),
+                            );
                           } else {
                             // Keep as-is
                           }
@@ -454,7 +524,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           },
                           child: const Text('Clear all'),
                         ),
-                      )
+                      ),
                     ],
                   ),
                 );
@@ -524,8 +594,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return SizedBox(
       height: 48,
       width: 48,
-      child: Container
-        (
+      child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
@@ -608,7 +677,11 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _sectionHeader(String title) {
     return Text(
       title,
-      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textSecondary,
+      ),
     );
   }
 }

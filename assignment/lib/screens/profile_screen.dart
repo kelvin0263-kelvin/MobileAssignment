@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // <-- Add this import
 import '../providers/auth_provider.dart';
 import '../utils/app_utils.dart';
 import 'profile_info_screen.dart';
@@ -7,8 +8,32 @@ import 'change_password_screen.dart';
 import 'login_screen.dart';
 import '../widgets/app_header.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String name = 'Unknown';
+  String email = 'Not set';
+  String phone = 'Not set';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  void _loadProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      name = prefs.getString('name') ?? 'Unknown';
+      email = prefs.getString('email') ?? 'Not set';
+      phone = prefs.getString('phone') ?? 'Not set';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +42,29 @@ class ProfileScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const AppHeader(subtitle: 'Profile'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.build, color: AppColors.primary, size: 28),
+                      const SizedBox(width: 4),
+                      Text('Profile', style: AppTextStyles.headline1),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // const AppHeader(subtitle: 'Profile'),
+            // Display profile info here if needed
+            // Padding(
+            //   padding: const EdgeInsets.all(16),
+            //   child: Column(
+            //     crossAxisAlignment: CrossAxisAlignment.start,
+            //   ),
+            // ),
             // Profile Options
             Expanded(
               child: Padding(
@@ -29,13 +76,16 @@ class ProfileScreen extends StatelessWidget {
                       icon: Icons.person_outline,
                       title: 'Profile Information',
                       subtitle: 'View and edit your profile details',
-                      onTap: () {
-                        Navigator.push(
+                      onTap: () async {
+                        final updated = await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const ProfileInfoScreen(),
                           ),
                         );
+                        if (updated == true) {
+                          _loadProfile(); // refresh after returning
+                        }
                       },
                     ),
                     const SizedBox(height: 16),
@@ -176,7 +226,7 @@ class ProfileScreen extends StatelessWidget {
   void _logout(BuildContext context) async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.logout();
-    
+
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(

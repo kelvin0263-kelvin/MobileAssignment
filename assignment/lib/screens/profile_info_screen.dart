@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/app_utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileInfoScreen extends StatefulWidget {
   const ProfileInfoScreen({super.key});
@@ -36,16 +37,16 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
     super.dispose();
   }
 
-  void _loadUserData() {
-    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-    if (user != null) {
-      _nameController.text = user.name;
-      _contactController.text = user.contactNo ?? '';
-      _addressController.text = user.address ?? '';
-      _stateController.text = user.state ?? '';
-      _districtController.text = user.district ?? '';
-      _selectedGender = user.gender ?? 'Male';
-    }
+  void _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _nameController.text = prefs.getString('name') ?? '';
+      _contactController.text = prefs.getString('phone') ?? '';
+      _addressController.text = prefs.getString('address') ?? '';
+      _stateController.text = prefs.getString('state') ?? '';
+      _districtController.text = prefs.getString('district') ?? '';
+      _selectedGender = prefs.getString('gender') ?? 'Male';
+    });
   }
 
   @override
@@ -90,15 +91,12 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              
-              Consumer<AuthProvider>(
-                builder: (context, authProvider, child) {
-                  return Text(
-                    authProvider.currentUser?.name ?? 'Mechanic Name',
-                    style: AppTextStyles.headline1,
-                  );
-                },
+
+              Text(
+                _nameController.text.isNotEmpty ? _nameController.text : 'User',
+                style: AppTextStyles.headline1,
               ),
+
               const SizedBox(height: 24),
               
               // Form Fields
@@ -200,8 +198,12 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
       keyboardType: keyboardType,
       maxLines: maxLines,
       validator: validator,
+      style: const TextStyle(color: Colors.black), // <-- Field value color
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(color: Colors.black), // Optional: label color
+        hintText: controller.text,
+        hintStyle: const TextStyle(color: Colors.black), // <-- Placeholder color
         border: const OutlineInputBorder(),
         filled: !enabled,
         fillColor: enabled ? null : AppColors.background,
@@ -217,7 +219,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
           'GENDER',
           style: AppTextStyles.body2.copyWith(
             fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
+            color: Colors.black, 
           ),
         ),
         const SizedBox(height: 8),
@@ -225,26 +227,36 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
           children: [
             Expanded(
               child: RadioListTile<String>(
-                title: const Text('Male'),
+                title: const Text(
+                  'Male',
+                  style: TextStyle(color: Colors.black), // <-- Make option black
+                ),
                 value: 'Male',
                 groupValue: _selectedGender,
-                onChanged: _isEditing ? (value) {
-                  setState(() {
-                    _selectedGender = value!;
-                  });
-                } : null,
+                onChanged: _isEditing
+                    ? (value) {
+                        setState(() {
+                          _selectedGender = value!;
+                        });
+                      }
+                    : null,
               ),
             ),
             Expanded(
               child: RadioListTile<String>(
-                title: const Text('Female'),
+                title: const Text(
+                  'Female',
+                  style: TextStyle(color: Colors.black), // <-- Make option black
+                ),
                 value: 'Female',
                 groupValue: _selectedGender,
-                onChanged: _isEditing ? (value) {
-                  setState(() {
-                    _selectedGender = value!;
-                  });
-                } : null,
+                onChanged: _isEditing
+                    ? (value) {
+                        setState(() {
+                          _selectedGender = value!;
+                        });
+                      }
+                    : null,
               ),
             ),
           ],
@@ -253,20 +265,32 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
     );
   }
 
-  void _saveProfile() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Implement profile update functionality
-      setState(() {
-        _isEditing = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile updated successfully!'),
-          backgroundColor: AppColors.primary,
-        ),
-      );
-    }
+  void _saveProfile() async {
+  if (_formKey.currentState!.validate()) {
+    // Save to SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('name', _nameController.text);
+    await prefs.setString('phone', _contactController.text);
+    await prefs.setString('address', _addressController.text);
+    await prefs.setString('state', _stateController.text);
+    await prefs.setString('district', _districtController.text);
+    await prefs.setString('gender', _selectedGender);
+
+    setState(() {
+      _isEditing = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Profile updated successfully!'),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+
+    // Pop back to profile screen with a "true" flag
+    Navigator.pop(context, true);
   }
+}
 
   void _cancelEdit() {
     setState(() {
