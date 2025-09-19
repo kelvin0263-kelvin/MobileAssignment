@@ -49,7 +49,7 @@ class AppColors {
 
 class AppTextStyles {
   static const TextStyle headline1 = TextStyle(
-    fontSize: 22,
+    fontSize: 17,
     fontWeight: FontWeight.bold,
     color: AppColors.textPrimary,
   );

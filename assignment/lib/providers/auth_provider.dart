@@ -79,4 +79,89 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  Future<bool> resetPassword(String email) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _authService.resetPassword(email);
+      if (!result['success']) {
+        _error = result['message'];
+      }
+      return result['success'];
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> changePassword(String currentPassword, String newPassword) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _authService.changePassword(currentPassword, newPassword);
+      if (!result['success']) {
+        _error = result['message'];
+      }
+      return result['success'];
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> verifyEmail(String email) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _authService.verifyEmail(email);
+      print('AuthProvider - verifyEmail result: $result');
+      if (!result['success']) {
+        _error = result['message'];
+        print('AuthProvider - Error set: $_error');
+      } else {
+        print('AuthProvider - Email verification successful');
+      }
+      return result['success'];
+    } catch (e) {
+      _error = e.toString();
+      print('AuthProvider - Exception: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> resetPasswordForEmail(String email, String currentPassword, String newPassword) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _authService.resetPasswordForEmail(email, currentPassword, newPassword);
+      if (!result['success']) {
+        _error = result['message'];
+      }
+      return result['success'];
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

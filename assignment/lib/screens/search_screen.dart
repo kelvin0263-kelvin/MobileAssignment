@@ -55,8 +55,16 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Search', style: AppTextStyles.headline1),
-                  // const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.build, color: AppColors.primary, size: 28),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Search',
+                        style: AppTextStyles.headline1,
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -224,9 +232,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildDateChip() {
     final hasRange = _dateRange != null;
-    final label = hasRange
-        ? _formatRange(_dateRange!)
-        : 'Date';
+    final label = hasRange ? _formatRange(_dateRange!) : 'Date';
     return InputChip(
       label: Text(label),
       avatar: const Icon(Icons.date_range, size: 18),
@@ -236,8 +242,10 @@ class _SearchScreenState extends State<SearchScreen> {
               setState(() {
                 _dateRange = null;
               });
-              Provider.of<JobProvider>(context, listen: false)
-                  .setDateRange(null, null);
+              Provider.of<JobProvider>(
+                context,
+                listen: false,
+              ).setDateRange(null, null);
             }
           : null,
     );
@@ -245,7 +253,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _pickDateRange() async {
     final now = DateTime.now();
-    final initial = _dateRange ??
+    final initial =
+        _dateRange ??
         DateTimeRange(
           start: DateTime(now.year, now.month, now.day),
           end: DateTime(now.year, now.month, now.day),
@@ -260,8 +269,10 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() {
         _dateRange = picked;
       });
-      Provider.of<JobProvider>(context, listen: false)
-          .setDateRange(picked.start, picked.end);
+      Provider.of<JobProvider>(
+        context,
+        listen: false,
+      ).setDateRange(picked.start, picked.end);
     }
   }
 
@@ -272,6 +283,7 @@ class _SearchScreenState extends State<SearchScreen> {
       final day = d.day.toString().padLeft(2, '0');
       return '$y-$m-$day';
     }
+
     final s = fmt(r.start);
     final e = fmt(r.end);
     return s == e ? s : '$s → $e';

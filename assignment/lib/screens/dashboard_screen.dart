@@ -142,26 +142,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+
                   children: [
-                    Text('Job Dashboard', style: AppTextStyles.headline1),
-                    const SizedBox(height: 4),
-                    Builder(builder: (context) {
-                      final offline = Provider.of<JobProvider>(context).isOffline;
-                      return offline
-                          ? Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.15),
-                                border: Border.all(color: Colors.orange.withOpacity(0.5)),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                'Offline — showing last saved jobs',
-                                style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.w600),
-                              ),
-                            )
-                          : const SizedBox.shrink();
-                    }),
+                    Row(
+                      children: [
+                        Icon(Icons.build, color: AppColors.primary, size: 28),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Job Dashboard',
+                          style: AppTextStyles.headline1,
+                        ),
+                      ],
+                    ),
+                    // Text('Job Dashboard', style: AppTextStyles.headline1),
+                    // const SizedBox(height: 4),
+                    Builder(
+                      builder: (context) {
+                        final offline = Provider.of<JobProvider>(
+                          context,
+                        ).isOffline;
+                        return offline
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.15),
+                                  border: Border.all(
+                                    color: Colors.orange.withOpacity(0.5),
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  'Offline',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink();
+                      },
+                    ),
                     // Text(
                     //   'Manage your assigned repair jobs',
                     //   style: AppTextStyles.body2,
@@ -172,40 +196,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               // Stat cards (responsive)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final isCompact = constraints.maxWidth < 420;
                     final cross = 2; // keep 2x2 for clarity
-                    const itemHeight = 136.0; // unified height
+                    const itemHeight = 110.0; // unified height
                     final items = [
                       FancyStatCard(
                         title: 'Total Jobs',
                         value: '$total',
-                        description: 'All Tasks',
+                        // description: '',
                         icon: Icons.apps_rounded,
-                        gradientColors: [AppColors.cardBackground, AppColors.background],
+                        gradientColors: [
+                          AppColors.cardBackground,
+                          AppColors.background,
+                        ],
                       ),
                       FancyStatCard(
                         title: 'Pending',
                         value: '$pending',
-                        description: 'Waiting',
+                        // description: '',
                         icon: Icons.hourglass_bottom_rounded,
-                        gradientColors: [AppColors.cardBackground, AppColors.background],
+                        gradientColors: [
+                          AppColors.cardBackground,
+                          AppColors.background,
+                        ],
                       ),
                       FancyStatCard(
                         title: 'In Progress',
                         value: '$active',
-                        description: 'Working + On Hold',
+                        // description: '',
                         icon: Icons.play_circle_fill_rounded,
-                        gradientColors: [AppColors.cardBackground, AppColors.background],
+                        gradientColors: [
+                          AppColors.cardBackground,
+                          AppColors.background,
+                        ],
                       ),
                       FancyStatCard(
                         title: 'Completed',
                         value: '$completed',
-                        description: 'Done',
+                        // description: '',
                         icon: Icons.check_circle_rounded,
-                        gradientColors: [AppColors.cardBackground, AppColors.background],
+                        gradientColors: [
+                          AppColors.cardBackground,
+                          AppColors.background,
+                        ],
                       ),
                     ];
 
@@ -213,8 +249,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       padding: EdgeInsets.zero,
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: cross,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 3,
+                        mainAxisSpacing: 0,
                         mainAxisExtent: itemHeight,
                       ),
                       itemCount: items.length,
@@ -226,7 +262,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 0),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Column(
@@ -329,7 +365,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               //     ),
               //   ),
               // ),
-              const SizedBox(height: 6),
+              // const SizedBox(height: 3),
 
               // List
               Expanded(
@@ -348,7 +384,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               style: AppTextStyles.headline2,
                             ),
                             const SizedBox(height: 8),
-                            Text(jobProvider.error!, style: AppTextStyles.body2, textAlign: TextAlign.center, maxLines: 4, overflow: TextOverflow.ellipsis),
+                            Text(
+                              jobProvider.error!,
+                              style: AppTextStyles.body2,
+                              textAlign: TextAlign.center,
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             const SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: () => jobProvider.loadJobs(),
@@ -394,7 +436,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => JobDetailsScreen(jobId: job.id),
+                                    builder: (context) =>
+                                        JobDetailsScreen(jobId: job.id),
                                   ),
                                 );
                               },
@@ -429,7 +472,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 class FancyStatCard extends StatelessWidget {
   final String title;
   final String value;
-  final String description;
+  // final String description;
   final IconData icon;
   final List<Color> gradientColors;
 
@@ -437,7 +480,7 @@ class FancyStatCard extends StatelessWidget {
     super.key,
     required this.title,
     required this.value,
-    required this.description,
+    // required this.description,
     required this.icon,
     required this.gradientColors,
   });
@@ -453,11 +496,17 @@ class FancyStatCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 14, offset: Offset(0, 6))],
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
         border: Border.all(color: AppColors.divider),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(10),
         child: Row(
           children: [
             Container(
@@ -475,11 +524,26 @@ class FancyStatCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyles.caption),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption,
+                  ),
                   const SizedBox(height: 4),
-                  Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyles.headline2),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.headline2,
+                  ),
                   const SizedBox(height: 2),
-                  Text(description, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyles.body2),
+                  // Text(
+                  //   description,
+                  //   maxLines: 1,
+                  //   overflow: TextOverflow.ellipsis,
+                  //   style: AppTextStyles.body2,
+                  // ),
                 ],
               ),
             ),

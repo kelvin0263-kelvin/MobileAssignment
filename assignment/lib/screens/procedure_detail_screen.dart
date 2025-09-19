@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/procedure_provider.dart';
@@ -403,6 +404,15 @@ class _ProcedureDetailScreenState extends State<ProcedureDetailScreen>
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () => _copyUrlToClipboard(stepWithVideo!.videoUrl!),
+                icon: const Icon(Icons.copy, size: 16),
+                label: const Text('Copy Video URL'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                ),
+              ),
             ],
           ),
         ),
@@ -429,22 +439,73 @@ class _ProcedureDetailScreenState extends State<ProcedureDetailScreen>
   Future<void> _launchVideo(String url) async {
     try {
       final Uri uri = Uri.parse(url);
+      
+      // Try multiple launch modes for better compatibility
+      bool launched = false;
+      
+      // First try: Launch in external application (YouTube app if available)
       if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
+        try {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          launched = true;
+        } catch (e) {
+          print('Failed to launch with external application: $e');
+        }
+      }
+      
+      // Second try: Launch in platform default browser
+      if (!launched && await canLaunchUrl(uri)) {
+        try {
+          await launchUrl(uri, mode: LaunchMode.platformDefault);
+          launched = true;
+        } catch (e) {
+          print('Failed to launch with platform default: $e');
+        }
+      }
+      
+      // Third try: Launch in external browser
+      if (!launched && await canLaunchUrl(uri)) {
+        try {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          launched = true;
+        } catch (e) {
+          print('Failed to launch in external browser: $e');
+        }
+      }
+      
+      if (!launched) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not launch video: $url')),
+            SnackBar(
+              content: Text('Could not launch video. Please check your browser or YouTube app.'),
+              action: SnackBarAction(
+                label: 'Copy URL',
+                onPressed: () => _copyUrlToClipboard(url),
+              ),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error launching video: $e')),
+          SnackBar(
+            content: Text('Error launching video: $e'),
+            action: SnackBarAction(
+              label: 'Copy URL',
+              onPressed: () => _copyUrlToClipboard(url),
+            ),
+          ),
         );
       }
     }
+  }
+
+  void _copyUrlToClipboard(String url) {
+    Clipboard.setData(ClipboardData(text: url));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('URL copied to clipboard')),
+    );
   }
 
   Color _getCategoryColor(String category) {

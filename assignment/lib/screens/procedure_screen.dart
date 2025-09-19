@@ -40,53 +40,67 @@ class _ProcedureScreenState extends State<ProcedureScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   Row(
+                         children: [
+                  Icon(Icons.build, color: AppColors.primary, size: 28),
+                 const SizedBox(width: 4  ),
+                 Text('Repair Manual & Guidelines', style: AppTextStyles.headline1),
+                ],),
+                ],
+              ),
+            ),
                 // Header with WorkShop Pro branding
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2))],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.build, color: AppColors.primary, size: 28),
-                          const SizedBox(width: 8),
-                          Text('WorkShop Pro', style: AppTextStyles.headline1),
-                          const Spacer(),
-                          // User profile icon (AT)
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Center(
-                              child: Text(
-                                'AT',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.arrow_forward_ios, color: AppColors.textSecondary, size: 16),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text('Repair Manual & Guidelines', style: AppTextStyles.headline2),
-                      const SizedBox(height: 4),
-                      Text('Step-by-step procedures for common repairs', style: AppTextStyles.body2),
-                    ],
-                  ),
-                ),
+                // Container(
+                //   width: double.infinity,
+                //   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                //   decoration: BoxDecoration(
+                //     color: AppColors.surface,
+                //     boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2))],
+                //   ),
+                //   child: Column(
+                //     crossAxisAlignment: CrossAxisAlignment.start,
+                //     children: [
+                //       Row(
+                //         children: [
+                //           Icon(Icons.build, color: AppColors.primary, size: 28),
+                //           const SizedBox(width: 8),
+                //           Text('WorkShop Pro', style: AppTextStyles.headline1),
+                //           const Spacer(),
+                //           // User profile icon (AT)
+                //           Container(
+                //             width: 32,
+                //             height: 32,
+                //             decoration: BoxDecoration(
+                //               color: AppColors.primary,
+                //               borderRadius: BorderRadius.circular(16),
+                //             ),
+                //             child: const Center(
+                //               child: Text(
+                //                 'AT',
+                //                 style: TextStyle(
+                //                   color: Colors.white,
+                //                   fontWeight: FontWeight.bold,
+                //                   fontSize: 14,
+                //                 ),
+                //               ),
+                //             ),
+                //           ),
+                //           const SizedBox(width: 8),
+                //           Icon(Icons.arrow_forward_ios, color: AppColors.textSecondary, size: 16),
+                //         ],
+                //       ),
+                //       const SizedBox(height: 8),
+                //       Text('Repair Manual & Guidelines', style: AppTextStyles.headline2),
+                //       const SizedBox(height: 4),
+                //       Text('Step-by-step procedures for common repairs', style: AppTextStyles.body2),
+                //     ],
+                //   ),
+                // ),
 
                 const SizedBox(height: 16),
 
@@ -371,7 +385,7 @@ class _CategoryCard extends StatelessWidget {
               // Icon
               Container(
                 width: 36,
-                height: 36,
+                height: 34,
                 decoration: BoxDecoration(
                   color: _getCategoryColor(category.name),
                   borderRadius: BorderRadius.circular(18),
@@ -470,6 +484,7 @@ class _ProcedureCard extends StatelessWidget {
             children: [
               // Header with icon, title, and badges
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     width: 48,
@@ -485,53 +500,66 @@ class _ProcedureCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(procedure.title, style: AppTextStyles.headline3),
-                        const SizedBox(height: 4),
+                        // Title
+                        Text(
+                          procedure.title,
+                          style: AppTextStyles.headline3,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        // Badges placed below the title to avoid squeezing text
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            // Difficulty badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _getDifficultyColor(procedure.difficulty).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: _getDifficultyColor(procedure.difficulty)),
+                              ),
+                              child: Text(
+                                procedure.difficultyDisplay,
+                                style: TextStyle(
+                                  color: _getDifficultyColor(procedure.difficulty),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            // Time badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.textSecondary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.access_time, size: 14, color: AppColors.textSecondary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    procedure.estimatedTimeDisplay,
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        // Category label
                         Text(
                           procedure.category?.name ?? 'Unknown Category',
                           style: AppTextStyles.body2.copyWith(color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Difficulty badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getDifficultyColor(procedure.difficulty).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _getDifficultyColor(procedure.difficulty)),
-                    ),
-                    child: Text(
-                      procedure.difficultyDisplay,
-                      style: TextStyle(
-                        color: _getDifficultyColor(procedure.difficulty),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Time badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.textSecondary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.access_time, size: 14, color: AppColors.textSecondary),
-                        const SizedBox(width: 4),
-                        Text(
-                          procedure.estimatedTimeDisplay,
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
                         ),
                       ],
                     ),
