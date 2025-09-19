@@ -8,6 +8,7 @@ import 'screens/dashboard_screen.dart';
 import 'utils/app_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/env.dart';
+import 'services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +35,8 @@ void main() async {
   } catch (_) {
     // If not provided, the app works with mock services
   }
+  // Initialize offline sync service (connectivity + queue)
+  await SyncService.instance.init();
   runApp(const MyApp());
 }
 
@@ -51,7 +54,7 @@ class MyApp extends StatelessWidget {
         title: 'Mechanic Hub',
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
+          colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary, background: AppColors.background),
           scaffoldBackgroundColor: AppColors.background,
           appBarTheme: const AppBarTheme(
             backgroundColor: AppColors.primary,
@@ -69,7 +72,7 @@ class MyApp extends StatelessWidget {
           ),
           inputDecorationTheme: InputDecorationTheme(
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: AppColors.inputFill,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           chipTheme: const ChipThemeData(

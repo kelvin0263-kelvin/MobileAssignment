@@ -2,45 +2,46 @@ import 'package:flutter/material.dart';
 import '../models/job.dart';
 
 class AppColors {
-  // Modern green color palette for workshop theme
-  static const Color primary = Color(0xFF2E7D32); // Professional dark green
-  static const Color primaryLight = Color(0xFF4CAF50); // Light green
-  static const Color primaryDark = Color(0xFF1B5E20); // Darker green
-  static const Color accent = Color(0xFF66BB6A); // Soft accent green
-  static const Color secondary = Color(0xFF37474F); // Blue-gray for contrast
-  
+  // Blue palette to match Login screen
+  static const Color primary = Color(0xFF2F57D9); // Login primary blue
+  static const Color primaryLight = Color(0xFF6F8BFF);
+  static const Color primaryDark = Color(0xFF203A8C);
+  static const Color accent = Color(0xFF7EA1FF);
+  static const Color secondary = Color(0xFF111827); // Near-black for contrast
+
   // Background colors
-  static const Color background = Color(0xFFF8F9FA); // Light gray background
+  static const Color background = Color(0xFFF5F7FF); // Subtle bluish background
   static const Color surface = Colors.white;
   static const Color cardBackground = Color(0xFFFFFFFF);
-  
+  static const Color inputFill = Color(0xFFF4F6FF); // Login input fill
+
   // Status colors
-  static const Color success = Color(0xFF4CAF50);
-  static const Color error = Color(0xFFE53935);
-  static const Color warning = Color(0xFFFFC107); // Yellow for in-progress
-  static const Color info = Color(0xFF1976D2);
-  static const Color onHold = Color(0xFFFF5722);
-  
+  static const Color success = Color(0xFF22C55E); // Tailwind green-500
+  static const Color error = Color(0xFFEF4444);   // Tailwind red-500
+  static const Color warning = Color(0xFFF59E0B); // Tailwind amber-500
+  static const Color info = Color(0xFF3B82F6);    // Tailwind blue-500
+  static const Color onHold = Color(0xFFFB923C);  // Tailwind orange-400
+
   // Text colors
-  static const Color textPrimary = Color(0xFF212121);
-  static const Color textSecondary = Color(0xFF757575);
-  static const Color textLight = Color(0xFF9E9E9E);
+  static const Color textPrimary = Color(0xFF0F172A);   // Slate-900
+  static const Color textSecondary = Color(0xFF64748B); // Slate-500
+  static const Color textLight = Color(0xFF94A3B8);     // Slate-400
   static const Color textOnPrimary = Colors.white;
-  
+
   // UI elements
-  static const Color divider = Color(0xFFE0E0E0);
+  static const Color divider = Color(0xFFE2E8F0); // Slate-200
   static const Color shadow = Color(0x1A000000);
   static const Color overlay = Color(0x80000000);
-  
+
   // Gradient colors
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+    colors: [Color(0xFF2F57D9), Color(0xFF6F8BFF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
-  
+
   static const LinearGradient cardGradient = LinearGradient(
-    colors: [Color(0xFFFFFFFF), Color(0xFFF8F9FA)],
+    colors: [Color(0xFFFFFFFF), Color(0xFFF5F7FF)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
@@ -48,13 +49,13 @@ class AppColors {
 
 class AppTextStyles {
   static const TextStyle headline1 = TextStyle(
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: FontWeight.bold,
     color: AppColors.textPrimary,
   );
   
   static const TextStyle headline2 = TextStyle(
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
   );
@@ -88,6 +89,8 @@ class JobStatusHelper {
         return 'On Hold';
       case JobStatus.completed:
         return 'Completed';
+      case JobStatus.declined:
+        return 'Declined';
     }
   }
 
@@ -103,6 +106,8 @@ class JobStatusHelper {
         return AppColors.error;
       case JobStatus.completed:
         return AppColors.success;
+      case JobStatus.declined:
+        return AppColors.error;
     }
   }
 
@@ -118,6 +123,8 @@ class JobStatusHelper {
         return Icons.pause_circle_outline;
       case JobStatus.completed:
         return Icons.check_circle;
+      case JobStatus.declined:
+        return Icons.cancel_outlined;
     }
   }
 }

@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
 import '../utils/app_utils.dart';
+import 'package:provider/provider.dart';
+import 'dart:typed_data';
+import '../services/supabase_storage_service.dart';
+import '../services/connectivity_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import '../providers/job_provider.dart';
 
 class SignatureWidget extends StatefulWidget {
   final String jobId;
@@ -18,6 +25,8 @@ class SignatureWidget extends StatefulWidget {
 
 class _SignatureWidgetState extends State<SignatureWidget> {
   late SignatureController _signatureController;
+  final SupabaseStorageService _storage = SupabaseStorageService();
+  bool _saving = false;
 
   @override
   void initState() {
@@ -125,18 +134,40 @@ class _SignatureWidgetState extends State<SignatureWidget> {
   Future<void> _saveSignature() async {
     if (_signatureController.isNotEmpty) {
       try {
-        final signatureData = await _signatureController.toPngBytes();
-        if (signatureData != null) {
-          // TODO: Save signature data to backend
-          // For now, we'll just show a success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Signature saved successfully!'),
-              backgroundColor: AppColors.primary,
-            ),
-          );
-          widget.onSignatureComplete();
+        setState(() => _saving = true);
+        final Uint8List? signatureData = await _signatureController.toPngBytes();
+        if (signatureData == null) throw 'No signature data';
+
+        final online = ConnectivityService.instance.isOnline;
+        if (online) {
+          // Upload now
+          final url = await _storage.uploadSignature(signatureData, jobId: widget.jobId);
+          final ok = await Provider.of<JobProvider>(context, listen: false)
+              .saveJobSignature(widget.jobId, url);
+          if (!ok) throw 'Failed to persist signature';
+        } else {
+          // Save locally and queue for sync
+          final dir = await getApplicationDocumentsDirectory();
+          final folder = Directory('${dir.path}/offline_uploads/signatures');
+          if (!await folder.exists()) {
+            await folder.create(recursive: true);
+          }
+          final filename = 'sig_${widget.jobId}_${DateTime.now().millisecondsSinceEpoch}.png';
+          final path = '${folder.path}/$filename';
+          final file = File(path);
+          await file.writeAsBytes(signatureData, flush: true);
+          await Provider.of<JobProvider>(context, listen: false)
+              .saveJobSignatureOffline(widget.jobId, path);
         }
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ConnectivityService.instance.isOnline
+              ? 'Signature saved successfully!'
+              : 'Signature saved for upload when back online'),
+          backgroundColor: AppColors.primary,
+        ));
+        widget.onSignatureComplete();
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -144,6 +175,8 @@ class _SignatureWidgetState extends State<SignatureWidget> {
             backgroundColor: AppColors.error,
           ),
         );
+      } finally {
+        if (mounted) setState(() => _saving = false);
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -6,7 +6,7 @@ import '../utils/app_utils.dart';
 import '../models/job.dart';
 import 'job_details_screen.dart';
 import '../widgets/app_header.dart';
-import '../widgets/job_card.dart';
+import '../widgets/dashboard_job_card.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -18,6 +18,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedFilter = 'all';
+  DateTimeRange? _dateRange;
 
   @override
   void initState() {
@@ -37,10 +38,29 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      // appBar: AppBar(
+      //   title: const Text('Search'),
+      //   backgroundColor: Colors.transparent,
+      //   elevation: 0,
+      //   foregroundColor: Colors.black,
+      //   centerTitle: true,
+      // ),
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const AppHeader(subtitle: 'Search'),
+            // Title + Subtitle
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Search', style: AppTextStyles.headline1),
+                  // const SizedBox(height: 4),
+                ],
+              ),
+            ),
+
             // Search Bar
             Padding(
               padding: const EdgeInsets.all(16),
@@ -53,7 +73,10 @@ class _SearchScreenState extends State<SearchScreen> {
                     icon: const Icon(Icons.clear),
                     onPressed: () {
                       _searchController.clear();
-                      Provider.of<JobProvider>(context, listen: false).searchJobs('');
+                      Provider.of<JobProvider>(
+                        context,
+                        listen: false,
+                      ).searchJobs('');
                     },
                   ),
                   border: OutlineInputBorder(
@@ -63,11 +86,14 @@ class _SearchScreenState extends State<SearchScreen> {
                   fillColor: AppColors.surface,
                 ),
                 onChanged: (value) {
-                  Provider.of<JobProvider>(context, listen: false).searchJobs(value);
+                  Provider.of<JobProvider>(
+                    context,
+                    listen: false,
+                  ).searchJobs(value);
                 },
               ),
             ),
-            
+
             // Filter Chips
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -84,13 +110,17 @@ class _SearchScreenState extends State<SearchScreen> {
                     _buildFilterChip('On Hold', 'onHold'),
                     const SizedBox(width: 8),
                     _buildFilterChip('Completed', 'completed'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Declined', 'declined'),
+                    const SizedBox(width: 8),
+                    _buildDateChip(),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Search Results
             Expanded(
               child: Consumer<JobProvider>(
@@ -100,7 +130,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   }
 
                   final jobs = jobProvider.filteredJobs;
-                  
+
                   if (jobs.isEmpty) {
                     return Center(
                       child: Column(
@@ -131,24 +161,34 @@ class _SearchScreenState extends State<SearchScreen> {
                   }
 
                   return RefreshIndicator(
-                    onRefresh: () => Provider.of<JobProvider>(context, listen: false).loadJobs(),
+                    onRefresh: () => Provider.of<JobProvider>(
+                      context,
+                      listen: false,
+                    ).loadJobs(),
                     child: ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: jobs.length,
                       itemBuilder: (context, index) {
                         final job = jobs[index];
-                        return JobCard(
-                          job: job,
-                          onTap: () {
-                            Provider.of<JobProvider>(context, listen: false).selectJob(job);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => JobDetailsScreen(jobId: job.id),
-                              ),
-                            );
-                          },
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12, top: 8),
+                          child: DashboardJobCard(
+                            job: job,
+                            onTap: () {
+                              Provider.of<JobProvider>(
+                                context,
+                                listen: false,
+                              ).selectJob(job);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      JobDetailsScreen(jobId: job.id),
+                                ),
+                              );
+                            },
+                          ),
                         );
                       },
                     ),
@@ -182,4 +222,58 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  Widget _buildDateChip() {
+    final hasRange = _dateRange != null;
+    final label = hasRange
+        ? _formatRange(_dateRange!)
+        : 'Date';
+    return InputChip(
+      label: Text(label),
+      avatar: const Icon(Icons.date_range, size: 18),
+      onPressed: _pickDateRange,
+      onDeleted: hasRange
+          ? () {
+              setState(() {
+                _dateRange = null;
+              });
+              Provider.of<JobProvider>(context, listen: false)
+                  .setDateRange(null, null);
+            }
+          : null,
+    );
+  }
+
+  Future<void> _pickDateRange() async {
+    final now = DateTime.now();
+    final initial = _dateRange ??
+        DateTimeRange(
+          start: DateTime(now.year, now.month, now.day),
+          end: DateTime(now.year, now.month, now.day),
+        );
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      initialDateRange: initial,
+    );
+    if (picked != null) {
+      setState(() {
+        _dateRange = picked;
+      });
+      Provider.of<JobProvider>(context, listen: false)
+          .setDateRange(picked.start, picked.end);
+    }
+  }
+
+  String _formatRange(DateTimeRange r) {
+    String fmt(DateTime d) {
+      final y = d.year.toString().padLeft(4, '0');
+      final m = d.month.toString().padLeft(2, '0');
+      final day = d.day.toString().padLeft(2, '0');
+      return '$y-$m-$day';
+    }
+    final s = fmt(r.start);
+    final e = fmt(r.end);
+    return s == e ? s : '$s → $e';
+  }
 }

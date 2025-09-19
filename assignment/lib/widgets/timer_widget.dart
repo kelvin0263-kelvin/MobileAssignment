@@ -5,6 +5,7 @@ import '../utils/app_utils.dart';
 class TimerWidget extends StatefulWidget {
   final String jobId;
   final bool isRunning;
+  final bool readOnly;
   final VoidCallback onStart;
   final VoidCallback onPause;
   final VoidCallback onStop;
@@ -13,6 +14,7 @@ class TimerWidget extends StatefulWidget {
     super.key,
     required this.jobId,
     required this.isRunning,
+    this.readOnly = false,
     required this.onStart,
     required this.onPause,
     required this.onStop,
@@ -64,7 +66,7 @@ class _TimerWidgetState extends State<TimerWidget> {
             children: [
               if (!widget.isRunning) ...[
                 ElevatedButton.icon(
-                  onPressed: () {
+                  onPressed: widget.readOnly ? null : () {
                     setState(() {
                       _startTime = DateTime.now();
                     });
@@ -80,7 +82,7 @@ class _TimerWidgetState extends State<TimerWidget> {
                 ),
               ] else ...[
                 ElevatedButton.icon(
-                  onPressed: () {
+                  onPressed: widget.readOnly ? null : () {
                     setState(() {
                       _elapsedTime += DateTime.now().difference(_startTime!);
                       _startTime = null;
@@ -96,7 +98,7 @@ class _TimerWidgetState extends State<TimerWidget> {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {
+                  onPressed: widget.readOnly ? null : () {
                     setState(() {
                       _elapsedTime = Duration.zero;
                       _startTime = null;

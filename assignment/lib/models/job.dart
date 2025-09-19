@@ -6,6 +6,7 @@ enum JobStatus {
   inProgress,
   onHold,
   completed,
+  declined,
 }
 
 class Job {

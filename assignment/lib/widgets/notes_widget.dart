@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import '../services/connectivity_service.dart';
 import '../providers/job_provider.dart';
 import '../utils/app_utils.dart';
 import '../models/job.dart';
@@ -10,8 +13,9 @@ import '../services/supabase_storage_service.dart';
 
 class NotesWidget extends StatefulWidget {
   final String jobId;
+  final bool readOnly;
 
-  const NotesWidget({super.key, required this.jobId});
+  const NotesWidget({super.key, required this.jobId, this.readOnly = false});
 
   @override
   State<NotesWidget> createState() => _NotesWidgetState();
@@ -164,24 +168,38 @@ class _NotesWidgetState extends State<NotesWidget> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     OutlinedButton.icon(
-                      onPressed: _isUploading
+                      onPressed: widget.readOnly
                           ? null
-                          : () => _selectImage(ImageSource.camera),
+                          : (_isUploading
+                              ? null
+                              : () => _selectImage(ImageSource.camera)),
                       icon: const Icon(Icons.camera_alt),
                       label: const Text('Camera'),
                     ),
                     OutlinedButton.icon(
-                      onPressed: _isUploading
+                      onPressed: widget.readOnly
                           ? null
-                          : () => _selectImage(ImageSource.gallery),
+                          : (_isUploading
+                              ? null
+                              : () => _selectImage(ImageSource.gallery)),
                       icon: const Icon(Icons.photo_library),
                       label: const Text('Upload Photo'),
                     ),
                     ElevatedButton(
-                      onPressed:
-                          _isUploading || _messageController.text.trim().isEmpty
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(
+                          double.infinity,
+                          48,
+                        ), // 按钮占满宽度，高度 48
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12), // 圆角
+                        ),
+                      ),
+                      onPressed: widget.readOnly
                           ? null
-                          : _addNoteWithMedia,
+                          : (_isUploading || _messageController.text.trim().isEmpty
+                              ? null
+                              : _addNoteWithMedia),
                       child: _isUploading
                           ? const Row(
                               mainAxisSize: MainAxisSize.min,
@@ -198,7 +216,7 @@ class _NotesWidgetState extends State<NotesWidget> {
                                 Text('Adding...'),
                               ],
                             )
-                          : const Text('+  Add Note'),
+                          : const Text('Add Note'),
                     ),
                   ],
                 ),
@@ -329,51 +347,49 @@ class _NotesWidgetState extends State<NotesWidget> {
     });
 
     try {
-      final List<NoteFile> uploadedFiles = [];
-
-      // Upload images if any are selected (optional)
-      if (_selectedImages.isNotEmpty) {
-        for (int i = 0; i < _selectedImages.length; i++) {
-          try {
-            final bytes = await _selectedImages[i].readAsBytes();
-            final filename =
-                'img_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
-            final url = await _storage.uploadNoteImage(
-              bytes,
-              filename: filename,
-            );
-            uploadedFiles.add(
-              NoteFile(
+      final online = ConnectivityService.instance.isOnline;
+      if (online) {
+        final List<NoteFile> uploadedFiles = [];
+        if (_selectedImages.isNotEmpty) {
+          for (int i = 0; i < _selectedImages.length; i++) {
+            try {
+              final bytes = await _selectedImages[i].readAsBytes();
+              final filename = 'img_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+              final url = await _storage.uploadNoteImage(bytes, filename: filename);
+              uploadedFiles.add(NoteFile(
                 id: 'tmp_$i',
                 noteId: 'tmp',
                 fileType: 'photo',
                 filePath: url,
-              ),
-            );
-          } catch (uploadError) {
-            print('Failed to upload image $i: $uploadError');
-            // Continue with other images - don't fail the entire note
+              ));
+            } catch (_) {}
           }
         }
+        await Provider.of<JobProvider>(context, listen: false)
+            .addJobNote(widget.jobId, text, files: uploadedFiles);
+      } else {
+        final dir = await getApplicationDocumentsDirectory();
+        final uploadsDir = Directory('${dir.path}/offline_uploads');
+        if (!await uploadsDir.exists()) {
+          await uploadsDir.create(recursive: true);
+        }
+        final List<String> localPaths = [];
+        for (int i = 0; i < _selectedImages.length; i++) {
+          try {
+            final filename = 'img_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+            final path = '${uploadsDir.path}/$filename';
+            await _selectedImages[i].saveTo(path);
+            localPaths.add(path);
+          } catch (_) {}
+        }
+        await Provider.of<JobProvider>(context, listen: false)
+            .addJobNoteOffline(widget.jobId, text, localPaths);
       }
 
-      // Add note with text (and optional files)
-      await Provider.of<JobProvider>(
-        context,
-        listen: false,
-      ).addJobNote(widget.jobId, text, files: uploadedFiles);
-
-      // Clear inputs
       _messageController.clear();
       setState(() {
         _selectedImages.clear();
       });
-
-      // Show feedback if some images failed but note was saved
-      if (_selectedImages.isNotEmpty &&
-          uploadedFiles.length < _selectedImages.length) {
-        _showError('Note saved, but some images failed to upload.');
-      }
     } catch (e) {
       _showError('Failed to add note: $e');
     } finally {

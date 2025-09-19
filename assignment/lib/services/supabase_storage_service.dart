@@ -63,4 +63,10 @@ class SupabaseStorageService {
     final path = 'users/$uid/$filename';
     return _uploadBytes('job-note-files', bytes, path: path, contentType: contentType);
   }
+
+  Future<String> uploadSignature(Uint8List bytes, {required String jobId}) async {
+    // Store signatures under a dedicated folder within the same bucket
+    final path = 'signatures/job_$jobId.png';
+    return _uploadBytes('job-note-files', bytes, path: path, contentType: 'image/png');
+  }
 }

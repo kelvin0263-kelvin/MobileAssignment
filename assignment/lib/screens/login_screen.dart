@@ -18,9 +18,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
-  // Auth screens use a distinct blue palette (keeps rest of app green)
-  static const Color _primaryBlue = Color(0xFF2F57D9);
-  static const Color _inputFill = Color(0xFFF4F6FF);
+  // Use global AppColors to unify palette
+  static const Color _primaryBlue = AppColors.primary;
+  static const Color _inputFill = AppColors.inputFill;
 
   @override
   void dispose() {

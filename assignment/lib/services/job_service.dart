@@ -3,6 +3,56 @@ import '../models/job.dart';
 
 class JobService {
   final SupabaseClient _client = Supabase.instance.client;
+  int? _cachedEmployeeId; // Session-scoped cache
+  String? _cachedForAuthUserId;
+
+  // Resolves the current employee.id for the logged-in auth user
+  Future<int?> _getCurrentEmployeeId() async {
+    try {
+      final user = _client.auth.currentUser;
+      if (user == null) return null;
+      // Reset cache if auth user changed
+      if (_cachedForAuthUserId != user.id) {
+        _cachedEmployeeId = null;
+        _cachedForAuthUserId = user.id;
+      }
+      if (_cachedEmployeeId != null) return _cachedEmployeeId;
+      final row = await _client
+          .from('employees')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+      if (row == null) {
+        // Attempt to create employee record for existing auth users
+        try {
+          final insert = await _client
+              .from('employees')
+              .insert({
+                'auth_user_id': user.id,
+                'name': (user.userMetadata?['name'] as String?) ?? (user.email?.split('@').first ?? 'User'),
+                'role': 'mechanic',
+                'email': user.email ?? 'unknown@example.com',
+              })
+              .select('id')
+              .maybeSingle();
+          if (insert != null) {
+            final id = (insert['id'] as num).toInt();
+            _cachedEmployeeId = id;
+            return id;
+          }
+        } catch (_) {
+          // ignore and fall through to null
+        }
+        return null;
+      } else {
+        final id = (row['id'] as num).toInt();
+        _cachedEmployeeId = id;
+        return id;
+      }
+    } catch (_) {
+      return null;
+    }
+  }
 
   // --- Mapping helpers ---
   JobStatus _parseStatus(String s) {
@@ -17,6 +67,8 @@ class JobService {
         return JobStatus.onHold;
       case 'completed':
         return JobStatus.completed;
+      case 'declined':
+        return JobStatus.declined;
       default:
         return JobStatus.pending;
     }
@@ -34,6 +86,8 @@ class JobService {
         return 'on_hold';
       case JobStatus.completed:
         return 'completed';
+      case JobStatus.declined:
+        return 'declined';
     }
   }
 
@@ -93,33 +147,118 @@ class JobService {
 
   // --- Public API ---
   Future<List<Job>> getJobs() async {
-    final rows = await _client
-        .from('jobs')
-        .select('id, job_name, description, status, priority, customer_id, vehicle_id, assigned_mechanic_id, created_at, start_time, end_time, estimated_duration, actual_duration, deadline, digital_signature')
-        .order('created_at', ascending: false);
+    final myEmpId = await _getCurrentEmployeeId();
+    final sel = 'id, job_name, description, status, priority, customer_id, vehicle_id, assigned_mechanic_id, created_at, start_time, end_time, estimated_duration, actual_duration, deadline, digital_signature';
+    List rows;
+    if (myEmpId == null) {
+      rows = await _client
+          .from('jobs')
+          .select(sel)
+          .eq('status', 'pending')
+          .filter('assigned_mechanic_id', 'is', null)
+          .order('created_at', ascending: false);
+    } else {
+      final pendingUnassigned = await _client
+          .from('jobs')
+          .select(sel)
+          .eq('status', 'pending')
+          .filter('assigned_mechanic_id', 'is', null)
+          .order('created_at', ascending: false);
+      final assignedToMe = await _client
+          .from('jobs')
+          .select(sel)
+          .eq('assigned_mechanic_id', myEmpId)
+          .order('created_at', ascending: false);
+      final mapRows = <String, Map<String, dynamic>>{};
+      for (final r in List<Map<String, dynamic>>.from(pendingUnassigned)) {
+        mapRows[r['id'].toString()] = r;
+      }
+      for (final r in List<Map<String, dynamic>>.from(assignedToMe)) {
+        mapRows[r['id'].toString()] = r;
+      }
+      rows = mapRows.values.toList()
+        ..sort((a, b) => DateTime.parse(b['created_at'] as String)
+            .compareTo(DateTime.parse(a['created_at'] as String)));
+    }
+
+    return _hydrateJobs(List<Map<String, dynamic>>.from(rows));
+  }
+
+  Future<List<Job>> getJobsByVehicle(String vehicleId) async {
+    final myEmpId = await _getCurrentEmployeeId();
+    final sel = 'id, job_name, description, status, priority, customer_id, vehicle_id, assigned_mechanic_id, created_at, start_time, end_time, estimated_duration, actual_duration, deadline, digital_signature';
+    List rows;
+    if (myEmpId == null) {
+      rows = await _client
+          .from('jobs')
+          .select(sel)
+          .eq('vehicle_id', vehicleId)
+          .eq('status', 'pending')
+          .filter('assigned_mechanic_id', 'is', null)
+          .order('start_time', ascending: false);
+    } else {
+      final pendingUnassigned = await _client
+          .from('jobs')
+          .select(sel)
+          .eq('vehicle_id', vehicleId)
+          .eq('status', 'pending')
+          .filter('assigned_mechanic_id', 'is', null)
+          .order('start_time', ascending: false);
+      final assignedToMe = await _client
+          .from('jobs')
+          .select(sel)
+          .eq('vehicle_id', vehicleId)
+          .eq('assigned_mechanic_id', myEmpId)
+          .order('start_time', ascending: false);
+      final mapRows = <String, Map<String, dynamic>>{};
+      for (final r in List<Map<String, dynamic>>.from(pendingUnassigned)) {
+        mapRows[r['id'].toString()] = r;
+      }
+      for (final r in List<Map<String, dynamic>>.from(assignedToMe)) {
+        mapRows[r['id'].toString()] = r;
+      }
+      rows = mapRows.values.toList()
+        ..sort((a, b) => (b['start_time'] ?? '').toString().compareTo((a['start_time'] ?? '').toString()));
+    }
 
     return _hydrateJobs(List<Map<String, dynamic>>.from(rows));
   }
 
   Future<Job?> getJobById(String jobId) async {
+    final myEmpId = await _getCurrentEmployeeId();
     final rows = await _client
         .from('jobs')
         .select('id, job_name, description, status, priority, customer_id, vehicle_id, assigned_mechanic_id, created_at, start_time, end_time, estimated_duration, actual_duration, deadline, digital_signature')
         .eq('id', jobId)
         .limit(1);
     if (rows.isEmpty) return null;
-    final list = await _hydrateJobs(List<Map<String, dynamic>>.from(rows));
+    // Enforce access: allow if pending+unassigned or assigned to me
+    final r = Map<String, dynamic>.from(List.from(rows).first as Map);
+    final assigned = r['assigned_mechanic_id'];
+    final status = (r['status'] ?? '').toString();
+    final canView = (assigned == null && status == 'pending') || (myEmpId != null && assigned == myEmpId);
+    if (!canView) return null;
+    final list = await _hydrateJobs([r]);
     return list.isNotEmpty ? list.first : null;
   }
 
   Future<bool> updateJobStatus(String jobId, JobStatus status) async {
-    final res = await _client
-        .from('jobs')
-        .update({'status': _toDbStatus(status)})
-        .eq('id', jobId)
-        .select('id')
-        .maybeSingle();
-    return res != null;
+    try {
+      final data = <String, dynamic>{'status': _toDbStatus(status)};
+      if (status == JobStatus.accepted) {
+        final empId = await _getCurrentEmployeeId();
+        if (empId != null) {
+          data['assigned_mechanic_id'] = empId;
+        }
+      }
+      await _client
+          .from('jobs')
+          .update(data)
+          .eq('id', jobId);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<String?> addJobNote(String jobId, String content) async {
@@ -179,11 +318,16 @@ class JobService {
   }
 
   Future<bool> addTimerEvent(String jobId, JobTimerAction action, {String? mechanicId}) async {
+    int? mechId;
+    if (mechanicId != null) {
+      mechId = int.tryParse(mechanicId);
+    }
+    mechId ??= await _getCurrentEmployeeId();
     final res = await _client
         .from('job_timers')
         .insert({
           'job_id': jobId,
-          'mechanic_id': mechanicId,
+          'mechanic_id': mechId,
           'action': _toDbTimerAction(action),
         })
         .select('id')
@@ -191,15 +335,25 @@ class JobService {
     return res != null;
   }
 
-  Future<List<Job>> searchJobs(String query) async {
-    if (query.isEmpty) return getJobs();
-    final q = '%${query.replaceAll('%', '\\%').replaceAll('_', '\\_')}%';
-    final rows = await _client
+  Future<bool> saveJobSignature(String jobId, String signatureUrl) async {
+    final res = await _client
         .from('jobs')
-        .select('id, job_name, description, status, priority, customer_id, vehicle_id, assigned_mechanic_id, created_at, start_time, end_time, estimated_duration, actual_duration, deadline, digital_signature')
-        .or('job_name.ilike.$q,description.ilike.$q')
-        .order('created_at', ascending: false);
-    return _hydrateJobs(List<Map<String, dynamic>>.from(rows));
+        .update({'digital_signature': signatureUrl})
+        .eq('id', jobId)
+        .select('id')
+        .maybeSingle();
+    return res != null;
+  }
+
+  Future<List<Job>> searchJobs(String query) async {
+    // Fetch visible jobs and then filter client-side for simplicity with complex visibility constraints
+    final all = await getJobs();
+    final term = query.trim().toLowerCase();
+    if (term.isEmpty) return all;
+    return all.where((j) {
+      final hay = '${j.jobName} ${j.description} ${j.customer.name} ${j.vehicle?.plateNo ?? ''}'.toLowerCase();
+      return hay.contains(term);
+    }).toList();
   }
 
   // --- Hydration helpers ---

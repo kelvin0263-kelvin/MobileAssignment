@@ -49,11 +49,7 @@ class _TaskScreenState extends State<TaskScreen> {
                             style: AppTextStyles.headline2,
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            jobProvider.error!,
-                            style: AppTextStyles.body2,
-                            textAlign: TextAlign.center,
-                          ),
+                          Text(jobProvider.error!, style: AppTextStyles.body2, textAlign: TextAlign.center, maxLines: 4, overflow: TextOverflow.ellipsis),
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () => jobProvider.loadJobs(),
