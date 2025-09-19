@@ -3,6 +3,8 @@ import '../models/procedure.dart';
 import '../models/procedure_category.dart';
 import '../models/procedure_step.dart';
 import '../services/procedure_service.dart';
+import '../services/procedure_cache_service.dart';
+import '../services/connectivity_service.dart';
 
 class ProcedureProvider extends ChangeNotifier {
   final ProcedureService _procedureService = ProcedureService();
@@ -30,8 +32,21 @@ class ProcedureProvider extends ChangeNotifier {
 
   // Initialize data
   Future<void> initialize() async {
-    await loadCategories();
-    await loadProcedures();
+    final online = ConnectivityService.instance.isOnline;
+    if (online) {
+      await loadCategories();
+      await loadProcedures();
+      // Prefetch full catalog for offline
+      await prefetchAllProceduresForOffline();
+    } else {
+      // Load from cache for offline startup
+      _isLoading = true;
+      notifyListeners();
+      _categories = await ProcedureCacheService.instance.loadCategories();
+      _procedures = await ProcedureCacheService.instance.loadProcedures();
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   // Load categories
@@ -41,6 +56,8 @@ class ProcedureProvider extends ChangeNotifier {
       notifyListeners();
       
       _categories = await _procedureService.getCategories();
+      // Save for offline
+      await ProcedureCacheService.instance.saveCategories(_categories);
     } catch (e) {
       print('Error loading categories: $e');
     } finally {
@@ -56,6 +73,8 @@ class ProcedureProvider extends ChangeNotifier {
       notifyListeners();
       
       _procedures = await _procedureService.getProcedures(categoryId: categoryId);
+      // Save latest list for offline browsing
+      await ProcedureCacheService.instance.saveProcedures(_procedures);
     } catch (e) {
       print('Error loading procedures: $e');
     } finally {
@@ -116,16 +135,60 @@ class ProcedureProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      
-      _selectedProcedure = await _procedureService.getProcedureById(procedureId);
-      if (_selectedProcedure != null) {
-        _procedureSteps = await _procedureService.getProcedureSteps(procedureId);
+      final online = ConnectivityService.instance.isOnline;
+      if (online) {
+        _selectedProcedure = await _procedureService.getProcedureById(procedureId);
+        if (_selectedProcedure != null) {
+          _procedureSteps = await _procedureService.getProcedureSteps(procedureId);
+          await ProcedureCacheService.instance.saveProcedureDetails(
+            procedure: _selectedProcedure!,
+            steps: _procedureSteps,
+          );
+        }
+      } else {
+        // Offline: try cache
+        _selectedProcedure = await ProcedureCacheService.instance.loadProcedure(procedureId);
+        _procedureSteps = await ProcedureCacheService.instance.loadProcedureSteps(procedureId);
       }
     } catch (e) {
-      print('Error loading procedure details: $e');
+      // Try cache on error as well
+      final cached = await ProcedureCacheService.instance.loadProcedure(procedureId);
+      if (cached != null) {
+        _selectedProcedure = cached;
+        _procedureSteps = await ProcedureCacheService.instance.loadProcedureSteps(procedureId);
+      } else {
+        print('Error loading procedure details: $e');
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  // Prefetch and cache all procedures and their steps for offline use
+  Future<void> prefetchAllProceduresForOffline() async {
+    try {
+      final online = ConnectivityService.instance.isOnline;
+      if (!online) return;
+
+      // Load full list (already cached in loadProcedures), but ensure we have the latest
+      final list = await _procedureService.getProcedures();
+      await ProcedureCacheService.instance.saveProcedures(list);
+
+      // Fetch details and steps for each and cache
+      for (final p in list) {
+        final proc = await _procedureService.getProcedureById(p.id);
+        final steps = await _procedureService.getProcedureSteps(p.id);
+        if (proc != null) {
+          await ProcedureCacheService.instance.saveProcedureDetails(
+            procedure: proc,
+            steps: steps,
+          );
+        }
+      }
+    } catch (e) {
+      // Best-effort: ignore errors; some items might still be cached
+      print('Prefetch procedures failed: $e');
     }
   }
 

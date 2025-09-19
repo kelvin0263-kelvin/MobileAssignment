@@ -345,6 +345,34 @@ class JobService {
     return res != null;
   }
 
+  // --- Procedures & Tasks ---
+  Future<List<ProcedureOption>> getProcedures() async {
+    final rows = await _client
+        .from('procedures')
+        .select('id, title, estimated_minutes');
+    return List<Map<String, dynamic>>.from(rows).map((r) => ProcedureOption(
+          id: (r['id'] as num).toInt(),
+          title: (r['title'] ?? '').toString(),
+          estimatedMinutes: (r['estimated_minutes'] as int?)
+              ?? (r['estimated_minutes'] is num ? (r['estimated_minutes'] as num).toInt() : null),
+        ))
+        .toList();
+  }
+
+  Future<void> createJobTasks({
+    required int jobId,
+    required List<CreateTaskInput> tasks,
+  }) async {
+    if (tasks.isEmpty) return;
+    final payload = tasks.map((t) => {
+          'job_id': jobId,
+          'description': t.description,
+          'status': _toDbTaskStatus(t.status),
+          if (t.procedureId != null) 'procedure_id': t.procedureId,
+        });
+    await _client.from('job_tasks').insert(payload.toList());
+  }
+
   Future<List<Job>> searchJobs(String query) async {
     // Fetch visible jobs and then filter client-side for simplicity with complex visibility constraints
     final all = await getJobs();
@@ -353,6 +381,187 @@ class JobService {
     return all.where((j) {
       final hay = '${j.jobName} ${j.description} ${j.customer.name} ${j.vehicle?.plateNo ?? ''}'.toLowerCase();
       return hay.contains(term);
+    }).toList();
+  }
+
+  // --- Creation API ---
+  Future<int> createCustomer({
+    required String name,
+    String? contactNo,
+    String? address,
+  }) async {
+    final row = await _client
+        .from('customers')
+        .insert({
+          'name': name,
+          'contact_no': contactNo,
+          'address': address,
+        })
+        .select('id')
+        .maybeSingle();
+    if (row == null) {
+      throw Exception('Failed to create customer');
+    }
+    return (row['id'] as num).toInt();
+  }
+
+  Future<int> createVehicle({
+    required int customerId,
+    String? brand,
+    String? model,
+    int? year,
+    String? plateNo,
+  }) async {
+    final row = await _client
+        .from('vehicles')
+        .insert({
+          'customer_id': customerId,
+          'brand': brand,
+          'model': model,
+          'year': year,
+          'plate_no': plateNo,
+        })
+        .select('id')
+        .maybeSingle();
+    if (row == null) {
+      throw Exception('Failed to create vehicle');
+    }
+    return (row['id'] as num).toInt();
+  }
+
+  String _normalizeJobStatus(String status) {
+    switch ((status).toLowerCase()) {
+      case 'pending':
+        return 'pending';
+      case 'accepted':
+        return 'accepted';
+      case 'in_progress':
+      case 'in progress':
+        return 'in_progress';
+      case 'on_hold':
+      case 'on hold':
+        return 'on_hold';
+      case 'completed':
+        return 'completed';
+      case 'declined':
+        return 'declined';
+      default:
+        return 'pending';
+    }
+  }
+
+  String _normalizePriority(String? priority) {
+    switch ((priority ?? 'medium').toLowerCase()) {
+      case 'low':
+        return 'low';
+      case 'medium':
+        return 'medium';
+      case 'high':
+        return 'high';
+      case 'urgent':
+        return 'urgent';
+      default:
+        return 'medium';
+    }
+  }
+
+  Future<int> createJob({
+    required String jobName,
+    String? description,
+    required String status,
+    String? priority,
+    required int customerId,
+    required int vehicleId,
+    int? assignedMechanicId,
+    int? estimatedDuration,
+    DateTime? deadline,
+  }) async {
+    final row = await _client
+        .from('jobs')
+        .insert({
+          'job_name': jobName,
+          'description': description,
+          'status': _normalizeJobStatus(status),
+          'priority': _normalizePriority(priority),
+          'customer_id': customerId,
+          'vehicle_id': vehicleId,
+          if (assignedMechanicId != null) 'assigned_mechanic_id': assignedMechanicId,
+          if (estimatedDuration != null) 'estimated_duration': estimatedDuration,
+          if (deadline != null) 'deadline': deadline.toIso8601String(),
+        })
+        .select('id')
+        .maybeSingle();
+    if (row == null) {
+      throw Exception('Failed to create job');
+    }
+    return (row['id'] as num).toInt();
+  }
+
+  String _normalizeAssignedPartStatus(String? status) {
+    switch ((status ?? 'available').toLowerCase()) {
+      case 'available':
+        return 'available';
+      case 'requested':
+      case 'order':
+      case 'ordered':
+        return 'requested';
+      case 'backordered':
+        return 'backordered';
+      default:
+        return 'available';
+    }
+  }
+
+  Future<void> createAssignedParts({
+    required int jobId,
+    required List<Map<String, dynamic>> parts,
+  }) async {
+    if (parts.isEmpty) return;
+    final payload = parts.map((p) {
+      final partId = p['part_id'] as int?;
+      if (partId == null) {
+        throw Exception('part_id is required for assigned part');
+      }
+      return {
+        'job_id': jobId,
+        'part_id': partId,
+        'name': (p['name'] ?? '').toString(),
+        'quantity': (p['quantity'] as int?) ?? 1,
+        if (p['unit_price'] != null) 'unit_price': (p['unit_price'] is num)
+            ? p['unit_price']
+            : num.tryParse(p['unit_price'].toString()),
+        'status': _normalizeAssignedPartStatus(p['status'] as String?),
+      };
+    }).toList();
+    await _client.from('assigned_parts').insert(payload);
+  }
+
+  // --- Parts directory ---
+  Future<List<PartOption>> getParts() async {
+    List rows = const [];
+    try {
+      rows = await _client
+          .from('parts')
+          .select('id, name, sku, unit_price');
+    } catch (_) {
+      // Fallback if unit_price column does not exist
+      rows = await _client
+          .from('parts')
+          .select('id, name, sku');
+    }
+    return List<Map<String, dynamic>>.from(rows).map((r) {
+      final unit = r['unit_price'];
+      double? unitPrice;
+      if (unit is num) unitPrice = unit.toDouble();
+      if (unitPrice == null && unit != null) {
+        unitPrice = double.tryParse(unit.toString());
+      }
+      return PartOption(
+        id: (r['id'] as num).toInt(),
+        name: (r['name'] ?? '').toString(),
+        sku: (r['sku'] ?? '').toString(),
+        unitPrice: unitPrice,
+      );
     }).toList();
   }
 
@@ -540,4 +749,47 @@ class JobService {
     }
     return jobs;
   }
+}
+
+class PartOption {
+  final int id;
+  final String name;
+  final String sku;
+  final double? unitPrice;
+  const PartOption({
+    required this.id,
+    required this.name,
+    required this.sku,
+    this.unitPrice,
+  });
+
+  @override
+  String toString() => sku.isNotEmpty ? '$name ($sku)' : name;
+}
+
+class ProcedureOption {
+  final int id;
+  final String title;
+  final int? estimatedMinutes;
+  const ProcedureOption({
+    required this.id,
+    required this.title,
+    this.estimatedMinutes,
+  });
+
+  @override
+  String toString() => estimatedMinutes != null
+      ? '$title (${estimatedMinutes}m)'
+      : title;
+}
+
+class CreateTaskInput {
+  final String description;
+  final JobTaskStatus status;
+  final int? procedureId;
+  const CreateTaskInput({
+    required this.description,
+    this.status = JobTaskStatus.pending,
+    this.procedureId,
+  });
 }

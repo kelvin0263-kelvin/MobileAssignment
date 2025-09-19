@@ -10,6 +10,7 @@ import '../widgets/pill_segmented_control.dart';
 import '../widgets/signature_widget.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
+import 'procedure_detail_screen.dart';
 
 class JobDetailsScreen extends StatefulWidget {
   final String jobId;
@@ -1220,6 +1221,7 @@ class _TaskItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDone = task.status == JobTaskStatus.completed;
+    final int? procedureId = int.tryParse(task.procedureId ?? '');
     return Card(
       elevation: 1.5,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1257,6 +1259,19 @@ class _TaskItem extends StatelessWidget {
                 ],
               ),
             ),
+            if (procedureId != null)
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ProcedureDetailScreen(procedureId: procedureId),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.menu_book_outlined),
+                label: const Text('Procedure'),
+              ),
+            if (procedureId != null) const SizedBox(width: 8),
             if ((task.tutorialUrl ?? '').isNotEmpty)
               OutlinedButton.icon(
                 onPressed: () =>

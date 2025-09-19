@@ -10,6 +10,7 @@ import '../widgets/app_bottom_nav.dart';
 import 'job_details_screen.dart';
 import '../widgets/dashboard_job_card.dart';
 import 'procedure_screen.dart';
+import 'create_job_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -45,6 +46,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      floatingActionButton: _currentIndex == 0
+          ? FloatingActionButton(
+              onPressed: () async {
+                final created = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CreateJobScreen()),
+                );
+                if (created == true && mounted) {
+                  Provider.of<JobProvider>(context, listen: false).loadJobs();
+                }
+              },
+              child: const Icon(Icons.add),
+            )
+          : null,
       body: IndexedStack(
         index: _currentIndex,
         children: [
