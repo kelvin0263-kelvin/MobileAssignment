@@ -531,10 +531,14 @@ class _PartRow {
                 Expanded(
                   child: DropdownButtonFormField<PartOption>(
                     value: selectedPart,
+                    isExpanded: true,
                     items: partOptions
                         .map((p) => DropdownMenuItem<PartOption>(
                               value: p,
-                              child: Text(p.toString()),
+                              child: Text(
+                                p.toString(),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ))
                         .toList(),
                     onChanged: (v) {
@@ -559,7 +563,7 @@ class _PartRow {
                     decoration: const InputDecoration(labelText: 'Quantity'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: TextFormField(
                     controller: unitPriceCtrl,
@@ -567,10 +571,11 @@ class _PartRow {
                     decoration: const InputDecoration(labelText: 'Unit Price'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: status,
+                    isExpanded: true,
                     items: const [
                       DropdownMenuItem(value: 'available', child: Text('available')),
                       DropdownMenuItem(value: 'requested', child: Text('requested')),
@@ -646,6 +651,7 @@ class _TaskRow {
                 Expanded(
                   child: DropdownButtonFormField<JobTaskStatus>(
                     value: status,
+                    isExpanded: true,
                     items: const [
                       DropdownMenuItem(value: JobTaskStatus.pending, child: Text('pending')),
                       DropdownMenuItem(value: JobTaskStatus.inProgress, child: Text('in_progress')),
@@ -658,14 +664,18 @@ class _TaskRow {
                     decoration: const InputDecoration(labelText: 'Status'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: DropdownButtonFormField<ProcedureOption>(
                     value: selectedProcedure,
+                    isExpanded: true,
                     items: procedureOptions
                         .map((p) => DropdownMenuItem<ProcedureOption>(
                               value: p,
-                              child: Text(p.toString()),
+                              child: Text(
+                                p.toString(),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ))
                         .toList(),
                     onChanged: (v) {

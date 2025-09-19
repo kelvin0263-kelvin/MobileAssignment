@@ -183,6 +183,8 @@ class DashboardJobCard extends StatelessWidget {
 
   // Derive a simple priority from status for demo purposes
   String _priorityLabel(Job job) {
+    final p = job.priority?.toLowerCase();
+    if (p != null && p.isNotEmpty) return p;
     if (job.status == JobStatus.onHold) return 'high';
     if (job.status == JobStatus.inProgress) return 'medium';
     if (job.status == JobStatus.completed) return 'low';
@@ -190,6 +192,19 @@ class DashboardJobCard extends StatelessWidget {
   }
 
   Color _priorityColor(Job job) {
+    final p = job.priority?.toLowerCase();
+    switch (p) {
+      case 'urgent':
+        return AppColors.error.withOpacity(0.95);
+      case 'high':
+        return AppColors.error.withOpacity(0.85);
+      case 'medium':
+        return AppColors.warning;
+      case 'low':
+        return AppColors.info;
+      default:
+        break;
+    }
     if (job.status == JobStatus.onHold) return AppColors.error.withOpacity(0.85);
     if (job.status == JobStatus.inProgress) return AppColors.warning;
     if (job.status == JobStatus.completed) return AppColors.success;

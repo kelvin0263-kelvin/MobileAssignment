@@ -497,28 +497,39 @@ class JobProvider extends ChangeNotifier {
     List<Job> base = _searchQuery.isEmpty ? _jobs : _searchResults;
     var results = List<Job>.from(base);
 
-    // Status filter
+    // Status filter including custom 'active' bucket
     if (_filterStatus != 'all') {
-      JobStatus? status;
-      switch (_filterStatus) {
-        case 'pending':
-          status = JobStatus.pending;
-          break;
-        case 'inProgress':
-          status = JobStatus.inProgress;
-          break;
-        case 'onHold':
-          status = JobStatus.onHold;
-          break;
-        case 'completed':
-          status = JobStatus.completed;
-          break;
-        case 'declined':
-          status = JobStatus.declined;
-          break;
-      }
-      if (status != null) {
-        results = results.where((job) => job.status == status).toList();
+      if (_filterStatus == 'active') {
+        results = results.where((job) =>
+          job.status == JobStatus.accepted ||
+          job.status == JobStatus.inProgress ||
+          job.status == JobStatus.onHold
+        ).toList();
+      } else {
+        JobStatus? status;
+        switch (_filterStatus) {
+          case 'pending':
+            status = JobStatus.pending;
+            break;
+          case 'accepted':
+            status = JobStatus.accepted;
+            break;
+          case 'inProgress':
+            status = JobStatus.inProgress;
+            break;
+          case 'onHold':
+            status = JobStatus.onHold;
+            break;
+          case 'completed':
+            status = JobStatus.completed;
+            break;
+          case 'declined':
+            status = JobStatus.declined;
+            break;
+        }
+        if (status != null) {
+          results = results.where((job) => job.status == status).toList();
+        }
       }
     }
 

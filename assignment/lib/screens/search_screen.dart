@@ -18,6 +18,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedFilter = 'all';
+  String _selectedPriority = 'all';
   DateTimeRange? _dateRange;
 
   @override
@@ -119,9 +120,17 @@ class _SearchScreenState extends State<SearchScreen> {
                     const SizedBox(width: 8),
                     _buildFilterChip('Completed', 'completed'),
                     const SizedBox(width: 8),
-                    _buildFilterChip('Declined', 'declined'),
-                    const SizedBox(width: 8),
                     _buildDateChip(),
+                    const SizedBox(width: 8),
+                    _buildPriorityFilterChip('Priority: Any', 'all'),
+                    const SizedBox(width: 8),
+                    _buildPriorityFilterChip('Low', 'low'),
+                    const SizedBox(width: 8),
+                    _buildPriorityFilterChip('Medium', 'medium'),
+                    const SizedBox(width: 8),
+                    _buildPriorityFilterChip('High', 'high'),
+                    const SizedBox(width: 8),
+                    _buildPriorityFilterChip('Urgent', 'urgent'),
                   ],
                 ),
               ),
@@ -137,7 +146,12 @@ class _SearchScreenState extends State<SearchScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final jobs = jobProvider.filteredJobs;
+                  List<Job> jobs = jobProvider.filteredJobs;
+                  if (_selectedPriority != 'all') {
+                    jobs = jobs
+                        .where((j) => (j.priority ?? '').toLowerCase() == _selectedPriority)
+                        .toList();
+                  }
 
                   if (jobs.isEmpty) {
                     return Center(
@@ -222,6 +236,25 @@ class _SearchScreenState extends State<SearchScreen> {
         Provider.of<JobProvider>(context, listen: false).setFilterStatus(value);
       },
       selectedColor: AppColors.primary,
+      checkmarkColor: Colors.white,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : AppColors.textPrimary,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
+  }
+
+  Widget _buildPriorityFilterChip(String label, String value) {
+    final isSelected = _selectedPriority == value;
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          _selectedPriority = value;
+        });
+      },
+      selectedColor: AppColors.info,
       checkmarkColor: Colors.white,
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : AppColors.textPrimary,

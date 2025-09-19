@@ -21,18 +21,24 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
+  String _selectedFilter = 'all'; // Track selected filter card
+
+  // Dashboard filters
+  // final TextEditingController _searchController = TextEditingController();
+  // String _statusFilter = 'all';
+  // String _priorityFilter = 'all';
+  // String _sortBy = 'latest'; // latest | oldest
+
 
   // Dashboard filters
   final TextEditingController _searchController = TextEditingController();
-  String _statusFilter = 'all';
-  String _priorityFilter = 'all';
-  String _sortBy = 'latest'; // latest | oldest
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<JobProvider>(context, listen: false).loadJobs();
+      // Ensure Total filter is selected by default
+      Provider.of<JobProvider>(context, listen: false).setFilterStatus('all');
     });
   }
 
@@ -46,20 +52,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      floatingActionButton: _currentIndex == 0
-          ? FloatingActionButton(
-              onPressed: () async {
-                final created = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CreateJobScreen()),
-                );
-                if (created == true && mounted) {
-                  Provider.of<JobProvider>(context, listen: false).loadJobs();
-                }
-              },
-              child: const Icon(Icons.add),
-            )
-          : null,
+      // floatingActionButton: _currentIndex == 0
+      //     ? FloatingActionButton(
+      //         onPressed: () async {
+      //           final created = await Navigator.push(
+      //             context,
+      //             MaterialPageRoute(builder: (_) => const CreateJobScreen()),
+      //           );
+      //           if (created == true && mounted) {
+      //             Provider.of<JobProvider>(context, listen: false).loadJobs();
+      //           }
+      //         },
+      //         child: const Icon(Icons.add),
+      //       )
+      //     : null,
       body: IndexedStack(
         index: _currentIndex,
         children: [
@@ -82,9 +88,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context, jobProvider, child) {
           final total = jobProvider.jobs.length;
           final pending = jobProvider.pendingJobs.length;
+          final accepted = jobProvider.acceptedJobs.length;
           final inProgress = jobProvider.inProgressJobs.length;
           final onHold = jobProvider.onHoldJobs.length;
-          final active = inProgress + onHold; // In-progress + on-hold
+          final active = accepted + inProgress + onHold; // Combined active jobs
           final completed = jobProvider.completedJobs.length;
 
           // Build filtered list locally so search can include id/customer/vehicle
@@ -108,46 +115,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return hay.contains(q);
                 }).toList();
 
-          // Status filter
-          if (_statusFilter != 'all') {
-            JobStatus? s;
-            switch (_statusFilter) {
-              case 'pending':
-                s = JobStatus.pending;
-                break;
-              case 'inProgress':
-                s = JobStatus.inProgress;
-                break;
-              case 'onHold':
-                s = JobStatus.onHold;
-                break;
-              case 'completed':
-                s = JobStatus.completed;
-                break;
-              case 'declined':
-                s = JobStatus.declined;
-                break;
-            }
-            if (s != null) {
-              list = list.where((j) => j.status == s).toList();
-            }
-          }
 
-          // Priority filter
-          if (_priorityFilter != 'all') {
-            list = list
-                .where(
-                  (j) => (_derivePriority(j)).toLowerCase() == _priorityFilter,
-                )
-                .toList();
-          }
-
-          // Sort
-          if (_sortBy == 'latest') {
-            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          } else {
-            list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-          }
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,9 +131,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         Icon(Icons.build, color: AppColors.primary, size: 28),
                         const SizedBox(width: 4),
-                        Text(
-                          'Job Dashboard',
-                          style: AppTextStyles.headline1,
+                        Text('Job Dashboard', style: AppTextStyles.headline1),
+                        const Spacer(), // 把按钮推到右边
+                        IconButton(
+                          icon: const Icon(Icons.add, color: Colors.blue),
+                          onPressed: () async {
+                            final created = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const CreateJobScreen(),
+                              ),
+                            );
+                            if (created == true && mounted) {
+                              Provider.of<JobProvider>(
+                                context,
+                                listen: false,
+                              ).loadJobs();
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -211,69 +194,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               // Stat cards (responsive)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isCompact = constraints.maxWidth < 420;
-                    final cross = 2; // keep 2x2 for clarity
-                    const itemHeight = 110.0; // unified height
-                    final items = [
-                      FancyStatCard(
-                        title: 'Total Jobs',
-                        value: '$total',
-                        // description: '',
-                        icon: Icons.apps_rounded,
-                        gradientColors: [
-                          AppColors.cardBackground,
-                          AppColors.background,
-                        ],
-                      ),
-                      FancyStatCard(
-                        title: 'Pending',
-                        value: '$pending',
-                        // description: '',
-                        icon: Icons.hourglass_bottom_rounded,
-                        gradientColors: [
-                          AppColors.cardBackground,
-                          AppColors.background,
-                        ],
-                      ),
-                      FancyStatCard(
-                        title: 'In Progress',
-                        value: '$active',
-                        // description: '',
-                        icon: Icons.play_circle_fill_rounded,
-                        gradientColors: [
-                          AppColors.cardBackground,
-                          AppColors.background,
-                        ],
-                      ),
-                      FancyStatCard(
-                        title: 'Completed',
-                        value: '$completed',
-                        // description: '',
-                        icon: Icons.check_circle_rounded,
-                        gradientColors: [
-                          AppColors.cardBackground,
-                          AppColors.background,
-                        ],
-                      ),
-                    ];
-
-                    return GridView.builder(
-                      padding: EdgeInsets.zero,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: cross,
-                        crossAxisSpacing: 3,
-                        mainAxisSpacing: 0,
-                        mainAxisExtent: itemHeight,
-                      ),
-                      itemCount: items.length,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemBuilder: (_, i) => items[i],
-                    );
-                  },
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Overview', style: AppTextStyles.headline2),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _JobFilterCard(
+                            title: 'Total Jobs',
+                            count: total,
+                            icon: Icons.apps,
+                            color: AppColors.primary,
+                            filterValue: 'all',
+                            isSelected: _selectedFilter == 'all',
+                            onTap: () => _onFilterTap('all'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _JobFilterCard(
+                            title: 'Pending',
+                            count: pending,
+                            icon: Icons.hourglass_empty,
+                            color: AppColors.warning,
+                            filterValue: 'pending',
+                            isSelected: _selectedFilter == 'pending',
+                            onTap: () => _onFilterTap('pending'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _JobFilterCard(
+                            title: 'In Progress',
+                            count: active,
+                            icon: Icons.play_circle,
+                            color: AppColors.info,
+                            filterValue: 'active',
+                            isSelected: _selectedFilter == 'active',
+                            onTap: () => _onFilterTap('active'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _JobFilterCard(
+                            title: 'Completed',
+                            count: completed,
+                            icon: Icons.check_circle,
+                            color: AppColors.success,
+                            filterValue: 'completed',
+                            isSelected: _selectedFilter == 'completed',
+                            onTap: () => _onFilterTap('completed'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
 
@@ -416,7 +398,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       );
                     }
 
-                    if (list.isEmpty) {
+                    if (jobProvider.filteredJobs.isEmpty) {
                       return Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
@@ -436,9 +418,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.all(16),
-                        itemCount: list.length,
+                        itemCount: jobProvider.filteredJobs.length,
                         itemBuilder: (context, index) {
-                          final job = list[index];
+                          final job = jobProvider.filteredJobs[index];
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: DashboardJobCard(
@@ -470,16 +452,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+  void _onFilterTap(String filterValue) {
+    setState(() {
+      _selectedFilter = filterValue;
+    });
+    Provider.of<JobProvider>(context, listen: false).setFilterStatus(filterValue);
+  }
 
-  // Derive a simple priority if not provided
-  String _derivePriority(Job job) {
-    final p = job.priority?.toLowerCase();
-    if (p != null && p.isNotEmpty) return p;
-    // Basic heuristic: onHold -> high, inProgress -> medium, completed -> low
-    if (job.status == JobStatus.onHold) return 'high';
-    if (job.status == JobStatus.inProgress) return 'medium';
-    if (job.status == JobStatus.completed) return 'low';
-    return 'medium';
+}
+class _JobFilterCard extends StatelessWidget {
+  final String title;
+  final int count;
+  final IconData icon;
+  final Color color;
+  final String filterValue;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _JobFilterCard({
+    required this.title,
+    required this.count,
+    required this.icon,
+    required this.color,
+    required this.filterValue,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.1) : AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? color : AppColors.divider,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Icon
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: Colors.white, size: 14),
+              ),
+              // Count
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              // Title
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? color : AppColors.textPrimary,
+                  height: 1.1,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

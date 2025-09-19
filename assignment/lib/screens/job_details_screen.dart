@@ -47,9 +47,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
           final job = jobProvider.selectedJob;
 
           return Scaffold(
-            backgroundColor: AppColors.background,
+            backgroundColor: AppColors.surface,
             appBar: PreferredSize(
-              preferredSize: const Size.fromHeight(140),
+              preferredSize: const Size.fromHeight(120),
               child: Container(
                 decoration: const BoxDecoration(
                   gradient: AppColors.primaryGradient,
@@ -87,13 +87,13 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.more_vert,
-                              color: Colors.white,
-                            ),
-                            onPressed: _showOptionsDialog,
-                          ),
+                          // IconButton(
+                          //   icon: const Icon(
+                          //     Icons.more_vert,
+                          //     color: Colors.white,
+                          //   ),
+                          //   onPressed: _showOptionsDialog,
+                          // ),
                         ],
                       ),
                       // Secondary row with id and status chip
@@ -129,7 +129,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                       //     ],
                       //   ),
                       // ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
                       // Segmented control for sections
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -152,13 +152,20 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                           currentIndex: _segmentIndex,
                           onChanged: (i) {
                             final status = job?.status;
-                            final locked = status == JobStatus.pending || status == JobStatus.declined || status == null;
+                            final locked =
+                                status == JobStatus.pending ||
+                                status == JobStatus.declined ||
+                                status == null;
                             final allowed = locked ? i == 0 : true;
                             if (allowed) {
                               setState(() => _segmentIndex = i);
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Accept the job to access this section')),
+                                const SnackBar(
+                                  content: Text(
+                                    'Accept the job to access this section',
+                                  ),
+                                ),
                               );
                             }
                           },
@@ -206,7 +213,10 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
       _buildTimeTab(job),
       _buildNotesTab(job),
     ];
-    final idx = (job.status == JobStatus.pending || job.status == JobStatus.declined) ? 0 : _segmentIndex;
+    final idx =
+        (job.status == JobStatus.pending || job.status == JobStatus.declined)
+        ? 0
+        : _segmentIndex;
     return views[idx.clamp(0, views.length - 1)];
   }
 
@@ -221,6 +231,10 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
           _buildQuickStats(job),
           const SizedBox(height: 16),
           _buildCustomerDetails(job),
+          if (job.vehicle != null) ...[
+            const SizedBox(height: 16),
+            _buildVehicleDetails(job),
+          ],
           const SizedBox(height: 16),
           _buildAssignedPartsReadOnly(job),
         ],
@@ -230,50 +244,70 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
 
   Widget _buildQuickStats(Job job) {
     final total = job.tasks.length;
-    final done = job.tasks.where((t) => t.status == JobTaskStatus.completed).length;
-    return Row(
+    final done = job.tasks
+        .where((t) => t.status == JobTaskStatus.completed)
+        .length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _miniStat('Tasks', '$done/$total', Icons.checklist),
-        const SizedBox(width: 12),
+        const SizedBox(height: 12),
         _miniStat('Notes', '${job.notes.length}', Icons.note_alt_outlined),
-        const SizedBox(width: 12),
+        const SizedBox(height: 12),
         _miniStat('Parts', '${job.assignedParts.length}', Icons.build),
       ],
     );
   }
 
   Widget _miniStat(String label, String value, IconData icon) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.divider),
-          boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 10, offset: Offset(0, 4))],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-              child: Icon(icon, size: 18, color: AppColors.primary),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(label, style: AppTextStyles.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text(value, style: AppTextStyles.body1, maxLines: 1, overflow: TextOverflow.ellipsis),
-                ],
-              ),
+            child: Icon(icon, size: 18, color: AppColors.primary),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: AppTextStyles.body1,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -295,23 +329,33 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Task Checklist', style: AppTextStyles.headline2),
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 8,
-                    backgroundColor: AppColors.divider,
+                child: Text('Task Checklist', style: AppTextStyles.headline2),
+              ),
+
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight, // 👈 靠右
+                  child: Text(
+                    '$done of $total completed',
+                    style: AppTextStyles.caption,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Text('$done of $total completed', style: AppTextStyles.caption),
             ],
+          ),
+                    const SizedBox(height: 8),
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: AppColors.divider,
+            ),
           ),
           const SizedBox(height: 16),
           if (tasks.isEmpty)
@@ -371,7 +415,10 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   Widget _buildNotesTab(Job job) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: NotesWidget(jobId: job.id, readOnly: job.status == JobStatus.completed),
+      child: NotesWidget(
+        jobId: job.id,
+        readOnly: job.status == JobStatus.completed,
+      ),
     );
   }
 
@@ -396,7 +443,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                 Expanded(
                   child: Text(
                     job.jobName,
-                    style: AppTextStyles.headline2.copyWith(fontWeight: FontWeight.w700),
+                    style: AppTextStyles.headline2.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 2,
                   ),
@@ -444,13 +493,23 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
             ],
             if ((job.digitalSignature ?? '').isNotEmpty) ...[
               const SizedBox(height: 14),
-              Text('Signature', style: AppTextStyles.body1.copyWith(fontWeight: FontWeight.w600)),
+              Text(
+                'Signature',
+                style: AppTextStyles.body1.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () => _viewSignature(job.digitalSignature!),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: _imageForPath(job.digitalSignature!, height: 120, width: double.infinity, fit: BoxFit.contain),
+                  child: _imageForPath(
+                    job.digitalSignature!,
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ],
@@ -463,23 +522,71 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   Widget _buildCustomerDetails(Job job) {
     return Card(
       elevation: 2,
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Customer', style: AppTextStyles.headline2),
-            const SizedBox(height: 12),
-            _iconDetailRow(Icons.person, 'Name', job.customer.name),
-            _iconDetailRow(Icons.phone, 'Contact No', job.customer.contactNo),
-            _iconDetailRow(
-              Icons.location_on_outlined,
-              'Address',
-              job.customer.address,
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.person_outline,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text('Customer', style: AppTextStyles.headline2),
+                const Spacer(),
+                if (job.vehicle != null)
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      final v = job.vehicle!;
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => _VehicleHistoryScreen(
+                            vehicleId: v.id,
+                            plateNo: v.plateNo ?? '-',
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.history, size: 14), // 👈 图标再小
+                    label: const Text(
+                      'Repair History',
+                      style: TextStyle(fontSize: 12), // 👈 字体再小
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ), // 👈 内边距小
+                      minimumSize: Size.zero, // 👈 允许按钮高度小于默认
+                      tapTargetSize:
+                          MaterialTapTargetSize.shrinkWrap, // 👈 点击区域缩小
+                      shape: const StadiumBorder(),
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(height: 16),
-            if (job.vehicle != null) _buildVehicleDetails(job),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _labelValue('Name', job.customer.name)),
+                const SizedBox(width: 12),
+                Expanded(child: _labelValue('Contact', job.customer.contactNo)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _labelValue('Address', job.customer.address),
           ],
         ),
       ),
@@ -495,7 +602,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     ].where((e) => (e ?? '').toString().isNotEmpty).join(' ').trim();
 
     return Card(
-      elevation: 1.5,
+      elevation: 2,
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -504,38 +612,71 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
           children: [
             Row(
               children: [
-                Text('Vehicle', style: AppTextStyles.headline2),
-                const Spacer(),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => _VehicleHistoryScreen(
-                          vehicleId: v.id,
-                          plateNo: v.plateNo ?? '-',
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.history),
-                  label: const Text('Repair History'),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.directions_car,
+                    color: AppColors.success,
+                  ),
                 ),
+                const SizedBox(width: 12),
+                Text('Vehicle', style: AppTextStyles.headline2),
               ],
             ),
-            const SizedBox(height: 8),
-            _iconDetailRow(
-              Icons.confirmation_number,
-              'Plate No',
-              v.plateNo ?? '-',
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _labelValue(
+                    'Brand & Model',
+                    vehicleTitle.isEmpty ? '-' : vehicleTitle,
+                  ),
+                ),
+                // const SizedBox(width: 12),
+                // Expanded(child: _labelValue('Year', v.year?.toString() ?? '-')),
+              ],
             ),
-            _iconDetailRow(
-              Icons.directions_car,
-              'Vehicle',
-              vehicleTitle.isEmpty ? '-' : vehicleTitle,
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _labelValue('Plate Number', v.plateNo ?? '-')),
+
+                const SizedBox(width: 12),
+                Expanded(child: _labelValue('Year', v.year?.toString() ?? '-')),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _labelValue(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 12, // 👈 改大小
+            color: Colors.grey[600], // 👈 改颜色
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value.isEmpty ? '-' : value,
+          style: AppTextStyles.body1.copyWith(
+            fontSize: 14, // 👈 改大小
+            color: Colors.black, // 👈 改颜色
+          ),
+        ),
+      ],
     );
   }
 
@@ -561,6 +702,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   Widget _buildAssignedParts(Job job) {
     return Card(
       elevation: 2,
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -594,6 +736,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   Widget _buildAssignedPartsReadOnly(Job job) {
     return Card(
       elevation: 2,
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -604,14 +747,21 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
               children: [
                 Text('Assigned Parts', style: AppTextStyles.headline2),
                 const Spacer(),
-                Text('${job.assignedParts.length}', style: AppTextStyles.caption),
+                Text(
+                  '${job.assignedParts.length}',
+                  style: AppTextStyles.caption,
+                ),
               ],
             ),
             const SizedBox(height: 12),
             if (job.assignedParts.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text('No parts assigned yet', style: AppTextStyles.body2, textAlign: TextAlign.center),
+                child: Text(
+                  'No parts assigned yet',
+                  style: AppTextStyles.body2,
+                  textAlign: TextAlign.center,
+                ),
               )
             else
               ListView.separated(
@@ -684,10 +834,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
           const SizedBox(width: 8),
           SizedBox(
             width: 96,
-            child: Text(
-              '$label:',
-              style: AppTextStyles.body2.copyWith(fontWeight: FontWeight.w600),
-            ),
+            child: Text('$label:', style: AppTextStyles.body2),
           ),
           Expanded(child: Text(value, style: AppTextStyles.body2)),
         ],
@@ -931,8 +1078,11 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: (job.tasks.isEmpty ||
-                        job.tasks.every((t) => t.status == JobTaskStatus.completed))
+                onPressed:
+                    (job.tasks.isEmpty ||
+                        job.tasks.every(
+                          (t) => t.status == JobTaskStatus.completed,
+                        ))
                     ? () => _showCompleteJobDialog()
                     : null,
                 icon: const Icon(Icons.check_rounded),
@@ -975,30 +1125,51 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
       context: context,
       builder: (_) => Dialog(
         insetPadding: const EdgeInsets.all(12),
-        child: InteractiveViewer(child: _imageForPath(url, fit: BoxFit.contain)),
+        child: InteractiveViewer(
+          child: _imageForPath(url, fit: BoxFit.contain),
+        ),
       ),
     );
   }
 
-  Widget _imageForPath(String path, {double? height, double? width, BoxFit? fit}) {
+  Widget _imageForPath(
+    String path, {
+    double? height,
+    double? width,
+    BoxFit? fit,
+  }) {
     try {
       if (path.startsWith('http')) {
-        return Image.network(path, height: height, width: width, fit: fit, errorBuilder: (_, __, ___) => _broken());
+        return Image.network(
+          path,
+          height: height,
+          width: width,
+          fit: fit,
+          errorBuilder: (_, __, ___) => _broken(),
+        );
       }
-      final file = path.startsWith('file://') ? File.fromUri(Uri.parse(path)) : File(path);
-      return Image.file(file, height: height, width: width, fit: fit, errorBuilder: (_, __, ___) => _broken());
+      final file = path.startsWith('file://')
+          ? File.fromUri(Uri.parse(path))
+          : File(path);
+      return Image.file(
+        file,
+        height: height,
+        width: width,
+        fit: fit,
+        errorBuilder: (_, __, ___) => _broken(),
+      );
     } catch (_) {
       return _broken();
     }
   }
 
   Widget _broken() => Container(
-        height: 120,
-        width: double.infinity,
-        color: AppColors.background,
-        alignment: Alignment.center,
-        child: const Icon(Icons.broken_image, color: AppColors.textSecondary),
-      );
+    height: 120,
+    width: double.infinity,
+    color: AppColors.background,
+    alignment: Alignment.center,
+    child: const Icon(Icons.broken_image, color: AppColors.textSecondary),
+  );
 
   void _startTimer() {
     setState(() {
@@ -1029,40 +1200,40 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     jobProvider.updateJobStatus(widget.jobId, status);
   }
 
-  void _showOptionsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Job Options'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Edit Job'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.share),
-              title: const Text('Share Job Details'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.print),
-              title: const Text('Print Job Details'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // void _showOptionsDialog() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Job Options'),
+  //       content: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         children: [
+  //           ListTile(
+  //             leading: const Icon(Icons.edit),
+  //             title: const Text('Edit Job'),
+  //             onTap: () {
+  //               Navigator.pop(context);
+  //             },
+  //           ),
+  //           ListTile(
+  //             leading: const Icon(Icons.share),
+  //             title: const Text('Share Job Details'),
+  //             onTap: () {
+  //               Navigator.pop(context);
+  //             },
+  //           ),
+  //           ListTile(
+  //             leading: const Icon(Icons.print),
+  //             title: const Text('Print Job Details'),
+  //             onTap: () {
+  //               Navigator.pop(context);
+  //             },
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   void _showAddPartDialog() {
     showDialog(
@@ -1216,7 +1387,11 @@ class _TaskItem extends StatelessWidget {
   final ValueChanged<JobTaskStatus> onToggle;
   final bool readOnly;
 
-  const _TaskItem({required this.task, required this.onToggle, this.readOnly = false});
+  const _TaskItem({
+    required this.task,
+    required this.onToggle,
+    this.readOnly = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1224,6 +1399,8 @@ class _TaskItem extends StatelessWidget {
     final int? procedureId = int.tryParse(task.procedureId ?? '');
     return Card(
       elevation: 1.5,
+      color: Colors.white,
+
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -1234,8 +1411,10 @@ class _TaskItem extends StatelessWidget {
               onChanged: readOnly
                   ? null
                   : (v) => onToggle(
-                        v == true ? JobTaskStatus.completed : JobTaskStatus.pending,
-                      ),
+                      v == true
+                          ? JobTaskStatus.completed
+                          : JobTaskStatus.pending,
+                    ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(6),
               ),
@@ -1264,7 +1443,8 @@ class _TaskItem extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => ProcedureDetailScreen(procedureId: procedureId),
+                      builder: (_) =>
+                          ProcedureDetailScreen(procedureId: procedureId),
                     ),
                   );
                 },
