@@ -142,7 +142,10 @@ class AuthService {
     try {
       print('Attempting password reset for: $cleanEmail');
       
-      await Supabase.instance.client.auth.resetPasswordForEmail(cleanEmail);
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        cleanEmail,
+        redirectTo: 'io.supabase.flutter://login-callback',
+      );
       return {'success': true, 'message': 'Password reset email sent successfully'};
     } catch (e) {
       print('Supabase reset password error: $e');

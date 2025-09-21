@@ -14,13 +14,6 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  final _currentPasswordController = TextEditingController();
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  bool _obscureCurrentPassword = true;
-  bool _obscureNewPassword = true;
-  bool _obscureConfirmPassword = true;
-  bool _emailVerified = false;
   bool _passwordChanged = false;
 
   // Use global AppColors to unify palette
@@ -30,9 +23,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   void dispose() {
     _emailController.dispose();
-    _currentPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -78,165 +68,43 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        _passwordChanged 
-                          ? "Password has been successfully changed!"
-                          : _emailVerified 
-                            ? "Enter your current password and new password to reset"
-                            : "Enter your email address to verify and reset password",
+                        _passwordChanged
+                            ? "We have sent a password reset link to your email."
+                            : "Enter your email address to receive a password reset link",
                         textAlign: TextAlign.center,
                         style: AppTextStyles.headline2,
                       ),
                       const SizedBox(height: 24),
                       
                       if (!_passwordChanged) ...[
-                        if (!_emailVerified) ...[
-                          // Email Field (Step 1)
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: InputDecoration(
-                              hintText: 'Email',
-                              filled: true,
-                              fillColor: _inputFill,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: _primaryBlue.withOpacity(0.35), width: 1.2),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: _primaryBlue, width: 1.5),
-                              ),
+                        // Email Field (single step)
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            hintText: 'Email',
+                            filled: true,
+                            fillColor: _inputFill,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: _primaryBlue.withOpacity(0.35), width: 1.2),
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your email';
-                              }
-                              if (!ValidationHelper.isValidEmail(value.trim())) {
-                                return 'Please enter a valid email address';
-                              }
-                              return null;
-                            },
-                          ),
-                        ] else ...[
-                          // Password Fields (Step 2)
-                          // Current Password Field
-                          TextFormField(
-                            controller: _currentPasswordController,
-                            obscureText: _obscureCurrentPassword,
-                            decoration: InputDecoration(
-                              hintText: 'Current Password',
-                              filled: true,
-                              fillColor: _inputFill,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscureCurrentPassword ? Icons.visibility : Icons.visibility_off,
-                                  color: Colors.grey[700],
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscureCurrentPassword = !_obscureCurrentPassword;
-                                  });
-                                },
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: _primaryBlue.withOpacity(0.35), width: 1.2),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: _primaryBlue, width: 1.5),
-                              ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: _primaryBlue, width: 1.5),
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your current password';
-                              }
-                              return null;
-                            },
                           ),
-                          const SizedBox(height: 16),
-                          // New Password Field
-                          TextFormField(
-                            controller: _newPasswordController,
-                            obscureText: _obscureNewPassword,
-                            decoration: InputDecoration(
-                              hintText: 'New Password',
-                              filled: true,
-                              fillColor: _inputFill,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscureNewPassword ? Icons.visibility : Icons.visibility_off,
-                                  color: Colors.grey[700],
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscureNewPassword = !_obscureNewPassword;
-                                  });
-                                },
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: _primaryBlue.withOpacity(0.35), width: 1.2),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: _primaryBlue, width: 1.5),
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your new password';
-                              }
-                              if (!ValidationHelper.isValidPassword(value)) {
-                                return 'Password must be at least 6 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          // Confirm Password Field
-                          TextFormField(
-                            controller: _confirmPasswordController,
-                            obscureText: _obscureConfirmPassword,
-                            decoration: InputDecoration(
-                              hintText: 'Confirm New Password',
-                              filled: true,
-                              fillColor: _inputFill,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                                  color: Colors.grey[700],
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscureConfirmPassword = !_obscureConfirmPassword;
-                                  });
-                                },
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: _primaryBlue.withOpacity(0.35), width: 1.2),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: _primaryBlue, width: 1.5),
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please confirm your new password';
-                              }
-                              if (value != _newPasswordController.text) {
-                                return 'Passwords do not match';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            if (!ValidationHelper.isValidEmail(value.trim())) {
+                              return 'Please enter a valid email address';
+                            }
+                            return null;
+                          },
+                        ),
                         const SizedBox(height: 24),
                         // Reset Password Button
                         Consumer<AuthProvider>(
@@ -261,9 +129,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                         width: 20,
                                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                       )
-                                    : Text(
-                                        _emailVerified ? 'Reset Password' : 'Verify Email',
-                                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                    : const Text(
+                                        'Send Reset Link',
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                                       ),
                               ),
                             );
@@ -306,7 +174,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'Password changed successfully!',
+                                'Reset link sent!',
                                 style: AppTextStyles.headline2.copyWith(
                                   color: Colors.green[700],
                                 ),
@@ -314,7 +182,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Your password has been updated. You can now use your new password to sign in.',
+                                'Check your inbox for a password reset email and follow the instructions to set a new password.',
                                 style: AppTextStyles.body2,
                                 textAlign: TextAlign.center,
                               ),
@@ -378,28 +246,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   void _handleResetPassword() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
-      if (!_emailVerified) {
-        // Step 1: Verify email exists
-        final success = await authProvider.verifyEmail(_emailController.text.trim());
-        if (success && mounted) {
-          setState(() {
-            _emailVerified = true;
-          });
-        }
-      } else {
-        // Step 2: Reset password using email from step 1
-        final success = await authProvider.resetPasswordForEmail(
-          _emailController.text.trim(),
-          _currentPasswordController.text,
-          _newPasswordController.text,
-        );
-        
-        if (success && mounted) {
-          setState(() {
-            _passwordChanged = true;
-          });
-        }
+      final success = await authProvider.resetPassword(_emailController.text.trim());
+      if (success && mounted) {
+        setState(() {
+          _passwordChanged = true;
+        });
       }
     }
   }
